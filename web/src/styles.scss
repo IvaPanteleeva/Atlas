@@ -1,1 +1,53 @@
-/* You can add global styles to this file, and also import other style files */
+// Fonts are bundled from @fontsource (no Google Fonts requests).
+// The per-weight files declare cyrillic and latin faces with unicode-range,
+// so the browser only downloads the subsets the page actually uses.
+@use '@fontsource/oswald/500' as oswald-500;
+@use '@fontsource/oswald/600' as oswald-600;
+@use '@fontsource/golos-text/400' as golos-text-400;
+@use '@fontsource/golos-text/500' as golos-text-500;
+@use '@fontsource/golos-text/600' as golos-text-600;
+@use '@fontsource/jetbrains-mono/400' as jetbrains-mono-400;
+@use '@fontsource/jetbrains-mono/600' as jetbrains-mono-600;
+
+:root {
+    --bg: #e7e6e1;
+    --surface: #f8f7f4;
+    --sunk: #efeee9;
+    --ink: #1a1915;
+    --muted: #67635a;
+    --line: #d2cfc6;
+    --band: #141310;
+    --band-ink: #f2efe8;
+    --accent: #e09a12;
+    --accent-soft: #f6e2b4;
+    --accent-ink: #1a1915;
+    --good: #2d7a4c;
+    --good-soft: #d6ebdd;
+    --warn: #b4470f;
+    --warn-soft: #f5dccb;
+
+    --f-display: 'Oswald', 'Arial Narrow', sans-serif;
+    --f-body: 'Golos Text', system-ui, sans-serif;
+    --f-num: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--f-body);
+}
+
+h1,
+h2,
+h3 {
+    font-family: var(--f-display);
+}
+
+.num {
+    font-family: var(--f-num);
+    font-variant-numeric: tabular-nums;
+}

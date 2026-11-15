@@ -1,10 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { PlusOutline } from '@ant-design/icons-angular/icons';
+import { provideNzIcons } from 'ng-zorro-antd/icon';
 import { App } from './app';
 
 describe('App', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [App],
+            providers: [provideNzIcons([PlusOutline])],
         }).compileComponents();
     });
 
@@ -18,6 +21,6 @@ describe('App', () => {
         const fixture = TestBed.createComponent(App);
         await fixture.whenStable();
         const compiled = fixture.nativeElement as HTMLElement;
-        expect(compiled.querySelector('h1')?.textContent).toContain('Hello, atlas-web');
+        expect(compiled.querySelector('h1')?.textContent).toContain('Атлас');
     });
 });
