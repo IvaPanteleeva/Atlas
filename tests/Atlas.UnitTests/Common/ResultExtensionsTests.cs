@@ -3,7 +3,7 @@ using Atlas.Application.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace Atlas.Api.Tests.Common;
+namespace Atlas.UnitTests.Common;
 
 public class ResultExtensionsTests
 {

@@ -1,6 +1,6 @@
 using Atlas.Application.Common;
 
-namespace Atlas.Api.Tests.Common;
+namespace Atlas.UnitTests.Common;
 
 public class ResultTests
 {

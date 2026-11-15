@@ -2,9 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Atlas.Api.Tests;
+namespace Atlas.IntegrationTests;
 
-public class ApiRoutingTests(AtlasApiFactory factory) : IClassFixture<AtlasApiFactory>
+[Collection("Api")]
+public class ApiRoutingTests(AtlasApiFactory factory)
 {
     [Theory]
     [InlineData("/api/does-not-exist")]

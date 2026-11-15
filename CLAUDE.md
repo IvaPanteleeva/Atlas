@@ -21,7 +21,7 @@ Backend: 3 проекта, зависимости `Atlas.Api → Atlas.Infrastru
 - Пътищата са `/api/...` (вътрешни) и `/portal/...` (възложител).
 - Id-та навсякъде `Guid`.
 - DTO имена като скила `dotnet-webapi`: `Create<Entity>Request`, `Update<Entity>Request`, `<Entity>Response`, `<Entity>ListResponse`; `sealed record`.
-- Тестове: xUnit; unit тестове с ръчно писани fakes (без mocking библиотеки), интеграционни с `WebApplicationFactory`.
+- Тестове: xUnit. `tests/Atlas.UnitTests` — unit тестове с ръчно писани fakes (без mocking библиотеки), без Docker. `tests/Atlas.IntegrationTests` — `WebApplicationFactory` + Testcontainers (един Postgres контейнер за колекцията `[Collection("Api")]`), Respawn чисти данните; искат пуснат Docker.
 
 Frontend: структура като Gemsoft.
 - `src/app/libs/<feature>/`: папка за всеки компонент, `+state/<feature>.store.ts` (NgRx Signal Store), `<feature>.service.ts` (`HttpClient`), `<feature>.model.ts`. Общи неща в `libs/shared/`.
@@ -37,13 +37,14 @@ Frontend: структура като Gemsoft.
   src/Atlas.Api/
   src/Atlas.Application/
   src/Atlas.Infrastructure/
-  tests/Atlas.Api.Tests/
+  tests/Atlas.UnitTests/
+  tests/Atlas.IntegrationTests/
   web/                      Angular
   docs/                     ai-log.md, screenshots/ (само локално)
 ```
 - Отделно git repo в тази папка, branch `main`. GitHub: https://github.com/IvaPanteleeva/Atlas — private до предаването на курсовата, после public (линкът е за курсовата).
 - Хостингът се решава след функционалност 9. Дотогава CI прави само build и тестове.
-- Solution е `Atlas.slnx`. Тестове с xUnit; интеграционните с `WebApplicationFactory` + Testcontainers (празен Postgres в Docker за всяко пускане). Angular без SSR, със SCSS и routing.
+- Solution е `Atlas.slnx`. Тестовете са описани в „Архитектура“. CI (`.github/workflows/ci.yml`) пуска build и всички тестове при push/PR към `main`. Angular без SSR, със SCSS и routing.
 - EF миграциите се прилагат сами при старт само в Development.
 - Plan Mode преди подстъпки, които създават основа или модел на данните.
 

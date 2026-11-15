@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Atlas.Api.Tests.Common;
+namespace Atlas.UnitTests.Common;
 
 public class ValidationFilterTests
 {

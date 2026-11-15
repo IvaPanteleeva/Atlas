@@ -1,8 +1,9 @@
 using System.Net;
 
-namespace Atlas.Api.Tests;
+namespace Atlas.IntegrationTests;
 
-public class SmokeTests(AtlasApiFactory factory) : IClassFixture<AtlasApiFactory>
+[Collection("Api")]
+public class SmokeTests(AtlasApiFactory factory)
 {
     [Fact]
     public async Task OpenApiDocument_IsServed_InDevelopment()
