@@ -499,3 +499,6 @@ web/dist/
 
 # Course assignment (not part of the project)
 Project-Assignment.docx
+
+# Course notes and screenshots, kept locally only
+docs/

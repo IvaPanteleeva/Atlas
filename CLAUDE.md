@@ -28,7 +28,17 @@
 - 0.2 `Atlas.slnx`, празен `Atlas.Api` със static files + fallback + Scalar (само Development), `Atlas.Api.Tests`
 - 0.3 Angular в `web/`, `outputPath` към `wwwroot`, `proxy.conf.json`
 - 0.4 първи commit, GitHub repo (създава го Ива в github.com), push
+- 0.5 AI настройки на проекта (виж „AI инструменти в repo-то“)
 Всяка подстъпка завършва с проверка (build минава, страницата се отваря).
+
+## AI инструменти в repo-то
+- Скилове в `.claude/skills/`: `grill-me`, `grilling`, `caveman`; `angular-developer` (Google, MIT); `dotnet-webapi`, `create-datadriven-aspnetcore`, `run-tests` (github.com/dotnet/skills, MIT). При конфликт между скил и CLAUDE.md, CLAUDE.md печели.
+- Subagents в `.claude/agents/`: `be-expert` (src/, tests/) и `fe-expert` (web/). `portal-reviewer` се добавя в стъпка 5a.
+- Hooks в `.claude/settings.json` (скриптове в `.claude/hooks/`): след промяна на `.cs` тръгва `dotnet build`, след промяна в `web/` тръгва prettier; в края на отговора тръгват тестовете, ако има промени в кода след последния commit.
+- MCP: Angular CLI (`.mcp.json`).
+- Команда `/step-done <подстъпка>`: build, тестове, обобщение и чернова за `docs/ai-log.md`.
+- CI (build + тестове) идва преди модул 6, ревюто с `@claude` в GitHub Actions — в модул 6. Cursor/Copilot — в модули 3 и 5.
+- `docs/` (ai-log и screenshot-и) е само локално, в `.gitignore`. Финалната версия отива в Google документа.
 
 ## Деплой (едно repo)
 - Както в Gemsoft: Angular build-ът отива в `wwwroot` на API-то, деплойва се само API-то.
