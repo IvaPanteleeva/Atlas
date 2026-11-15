@@ -1,0 +1,26 @@
+<header class="top">
+    <div class="top__inner">
+        <a class="brand" routerLink="/sites">АТЛАС <small>ДНЕВНИК</small></a>
+        <nav class="tabs tabs--top" aria-label="Основна навигация">
+            @for (item of navItems; track item.path) {
+                <a class="tabs__link" [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">{{
+                    item.label
+                }}</a>
+            }
+        </nav>
+    </div>
+    <div class="hazard" aria-hidden="true"></div>
+</header>
+
+<main class="content">
+    <router-outlet />
+</main>
+
+<nav class="tabs tabs--bottom" aria-label="Основна навигация">
+    @for (item of navItems; track item.path) {
+        <a class="tabs__link" [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">
+            <nz-icon [nzType]="item.icon" nzTheme="outline" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+        </a>
+    }
+</nav>

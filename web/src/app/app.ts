@@ -1,12 +1,9 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzIconModule } from 'ng-zorro-antd/icon';
+import { ShellComponent } from './libs/shared/layout/shell/shell.component';
 
 @Component({
-    imports: [RouterOutlet, NzButtonModule, NzIconModule],
+    imports: [ShellComponent],
     selector: 'atlas-root',
-    styleUrl: './app.scss',
     templateUrl: './app.html',
 })
 export class App {}
