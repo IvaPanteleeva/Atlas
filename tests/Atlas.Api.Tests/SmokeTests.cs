@@ -1,9 +1,8 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Atlas.Api.Tests;
 
-public class SmokeTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class SmokeTests(AtlasApiFactory factory) : IClassFixture<AtlasApiFactory>
 {
     [Fact]
     public async Task OpenApiDocument_IsServed_InDevelopment()

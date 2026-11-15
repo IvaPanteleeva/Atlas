@@ -5,23 +5,47 @@
 Референтен прототип (само опорна точка, не спецификация): https://claude.ai/artifact/4JEeA216cX2Z85gWN81aU3
 
 ## Stack
-- Backend: .NET 10, Minimal APIs по feature (Sites, WorkDays, Payments, People, Tasks, RateCard), EF Core, PostgreSQL (SQLite локално в началото)
-- Frontend: Angular 22 (създаден с `npx @angular/cli@22 new`, глобалното CLI е 20 и не се ползва), zoneless, signals, strict smart/dumb компоненти, `httpResource()` за четене
+- Backend: .NET 10, Minimal APIs, EF Core, PostgreSQL (локално в Docker), FluentValidation
+- Frontend: Angular 22 (създаден с `npx @angular/cli@22 new`, глобалното CLI е 20 и не се ползва), zoneless, signals, NgRx Signal Store, ng-zorro-antd
 - Мобилният изглед е основен (попълва се на обекта)
 - UI на български, валута EUR, locale `bg` ("1 157,89 €")
 
+## Архитектура
+Референция е Gemsoft (`/Users/ivaivanova/Projects /Gemsoft`), без нещата там, които са случайни (смесени Id-та, логика в controllers, без валидация, без глобален обработчик на грешки, Newtonsoft).
+
+Backend: 3 проекта, зависимости `Atlas.Api → Atlas.Infrastructure → Atlas.Application`.
+- `Atlas.Application`: DTO-та, enums, `Result`/`Result<T>`, интерфейси (`IRepository<T>`, `I<Feature>Repository`, `ICurrentUser`), FluentValidation validators в `Validation/`.
+- `Atlas.Infrastructure`: entities (`Entities/`), `Persistence/AtlasDbContext`, Fluent API конфигурации до всяко entity (`*Configuration.cs`), миграции в `Persistence/Migrations`, repositories. Регистрация със Scrutor по име (`AsMatchingInterface`).
+- `Atlas.Api`: Minimal API endpoints в `Endpoints/<Feature>Endpoints.cs` (статичен клас, `Map<Feature>Endpoints()`, `MapGroup("/api/<feature>")`), `ValidationFilter<T>` (собствен, без пакет), `ResultExtensions` към HTTP резултати, глобален `UseExceptionHandler` с ProblemDetails, DI чрез extension методи по слой.
+- Endpoints са тънки. Бизнес правилата са в методи на entities или в repositories, не в endpoints.
+- Пътищата са `/api/...` (вътрешни) и `/portal/...` (възложител).
+- Id-та навсякъде `Guid`.
+- DTO имена като скила `dotnet-webapi`: `Create<Entity>Request`, `Update<Entity>Request`, `<Entity>Response`, `<Entity>ListResponse`; `sealed record`.
+- Тестове: xUnit; unit тестове с ръчно писани fakes (без mocking библиотеки), интеграционни с `WebApplicationFactory`.
+
+Frontend: структура като Gemsoft.
+- `src/app/libs/<feature>/`: папка за всеки компонент, `+state/<feature>.store.ts` (NgRx Signal Store), `<feature>.service.ts` (`HttpClient`), `<feature>.model.ts`. Общи неща в `libs/shared/`.
+- Само NgRx Signal Store за state, без `httpResource()`.
+- Строго smart/dumb: само страницата (route компонентът) inject-ва store-а; останалите компоненти работят с `input()`/`output()`.
+- Lazy routes с `loadComponent`.
+- ng-zorro-antd с тема от прототипа (`theme.less`), locale `bg_BG`.
+- Prettier: 4 интервала, 120 колони, единични кавички.
+
 ## Структура на repo-то
-Един API проект с папки по feature, без отделни слоеве като в Gemsoft.
 ```
 Атлас/
-  src/Atlas.Api/            Features/Sites, Features/WorkDays, ... + Data/ (DbContext)
+  src/Atlas.Api/
+  src/Atlas.Application/
+  src/Atlas.Infrastructure/
   tests/Atlas.Api.Tests/
   web/                      Angular
-  docs/                     ai-log.md, screenshots/
+  docs/                     ai-log.md, screenshots/ (само локално)
 ```
 - Отделно git repo в тази папка, branch `main`. GitHub: https://github.com/IvaPanteleeva/Atlas — private до предаването на курсовата, после public (линкът е за курсовата).
-- Хостингът се решава след стъпка 5a. Дотогава CI прави само build и тестове.
-- Solution е `Atlas.slnx`. Тестове с xUnit (+ `WebApplicationFactory` за интеграционни). Angular без SSR, със SCSS и routing.
+- Хостингът се решава след функционалност 9. Дотогава CI прави само build и тестове.
+- Solution е `Atlas.slnx`. Тестове с xUnit; интеграционните с `WebApplicationFactory` + Testcontainers (празен Postgres в Docker за всяко пускане). Angular без SSR, със SCSS и routing.
+- EF миграциите се прилагат сами при старт само в Development.
+- Plan Mode преди подстъпки, които създават основа или модел на данните.
 
 ## Стъпка 0: подготовка на repo-то
 - 0.1 `git init`, `.gitignore`, `docs/ai-log.md`, `docs/screenshots/`
@@ -33,11 +57,11 @@
 
 ## AI инструменти в repo-то
 - Скилове в `.claude/skills/`: `grill-me`, `grilling`, `caveman`; `angular-developer` (Google, MIT); `dotnet-webapi`, `create-datadriven-aspnetcore`, `run-tests` (github.com/dotnet/skills, MIT). При конфликт между скил и CLAUDE.md, CLAUDE.md печели.
-- Subagents в `.claude/agents/`: `be-expert` (src/, tests/) и `fe-expert` (web/). `portal-reviewer` се добавя в стъпка 5a.
+- Subagents в `.claude/agents/`: `be-expert` (src/, tests/) и `fe-expert` (web/). `portal-reviewer` се добавя във функционалност 9.
 - Hooks в `.claude/settings.json` (скриптове в `.claude/hooks/`): след промяна на `.cs` тръгва `dotnet build`, след промяна в `web/` тръгва prettier; в края на отговора тръгват тестовете, ако има промени в кода след последния commit.
 - MCP: Angular CLI (`.mcp.json`).
 - Команда `/step-done <подстъпка>`: build, тестове, обобщение и чернова за `docs/ai-log.md`.
-- CI (build + тестове) идва преди модул 6, ревюто с `@claude` в GitHub Actions — в модул 6. Cursor/Copilot — в модули 3 и 5.
+- CI (build + тестове) идва преди модул 6, ревюто с `@claude` в GitHub Actions — в модул 6.
 - `docs/` (ai-log и screenshot-и) е само локално, в `.gitignore`. Финалната версия отива в Google документа.
 
 ## Деплой (едно repo)
@@ -76,45 +100,51 @@
 ### Решения спрямо прототипа
 - Един `WorkDay` = една дата. Няма `DateEnd`; работа за няколко дни се записва като няколко дни (точно броене на дни по човек).
 - `Unit` е enum, не свободен текст. В UI: м.л., м², ден, бр.
-- Без оферти засега: няма `kind`/planned на `WorkDay`, той е само свършена работа. Офертите идват с `Offer` (стъпка 7).
+- Без оферти засега: няма `kind`/planned на `WorkDay`, той е само свършена работа. Офертите идват с `Offer` (след предаването).
 - `Site.CompanyId` е nullable (директен клиент без фирма), `EndCustomer` е свободен текст. Прототипното поле `client` се разделя на двете.
 - Работниците са many-to-many `WorkDay` ↔ `Person` по Id, не по име (преименуване не чупи историята).
 - Флагът `flag` от прототипа е `NeedsReview`.
 - `Note` на `Site` и `Person` е вътрешно поле и не излиза в `/portal/...`.
 
-## Ред на работа
-1. Sites + WorkDays + WorkItems + RateCard
-2. ClientPayments + summary
-3. People + кой е работил
-4. Tasks
-5. Login и роли (ASP.NET Core Identity): Owner, Crew, ClientViewer
-5a. Портал за възложителя: ClientViewer от Женистрой вижда само обектите на своята Company и колко дължи
-6. WorkerPayouts
-7. Offers
-8. Seed с реалните данни от бележката
+## Ред на работа (функционалности)
+Всяка функционалност е цяла: backend + frontend + тестове.
+1. Основа: 3-те проекта, Postgres в Docker, `Result`, валидация, грешки, Testcontainers, ng-zorro, празен layout
+2. Вход и роли (ASP.NET Core Identity): Owner, Crew, ClientViewer; `Company`; екран за вход
+3. Обекти (Sites)
+4. Ценоразпис (RateCard)
+5. Работни дни и позиции (WorkDays + WorkItems)
+6. Плащания и суми (ClientPayments + summary)
+7. Хора и кой е работил (People)
+8. Задачи (Tasks)
+9. Портал за възложителя: ClientViewer от Женистрой вижда само обектите на своята Company и колко дължи
+След предаването: WorkerPayouts, Offers, seed с реалните данни от бележката.
 
 ## Курсов проект
 Проектът е и курсова работа: документ (3–6 стр.), който описва системата по модули и как AI е помогнал за всеки.
 За всеки модул трябват: подход, стъпки (какво е поискано от AI и какво е променено), тестване, избор на AI инструмент и 2–3 ключови prompt-а.
 Модули: 1) Database layer, 2) API и бизнес логика, 3) Authentication и роли, 4) Портал за възложителя, 5) Angular UI, 6) Testing layer.
-- Курсовият обхват е стъпки 1–5a от реда на работа. Останалото е след предаването.
+- Курсовият обхват е функционалности 1–9. Модулите на курсовата се попълват от тях (напр. „Authentication и роли“ = функционалност 2; „Database layer“ = 1 + моделите във всяка следваща).
 
 ### Инструменти по модули
-Целта е реално сравнение на инструментите в документа: всеки се ползва там, където е най-силен.
-1. Database layer — Claude Code: CLAUDE.md като памет на проекта, Plan Mode. Доказателство: entities и миграция по правилата тук.
-2. API и бизнес логика — Claude Code: agentic TDD (първо тестове, които падат, после кодът). Доказателство: тестове за `GET /sites/{id}/summary` (`null` цени, `NeedsReview`).
-3. Authentication и роли — Cursor (или Copilot, ако няма Cursor): prompt за целия проект „покажи план преди промени“, отделен worktree. Доказателство: Identity с роли, въведено с малки стъпки.
-4. Портал за възложителя — Claude Code: собствен subagent в `.claude/agents/` за ревю срещу изтичане на данни. Доказателство: тест, че друга фирма получава 403/404.
-5. Angular UI — GitHub Copilot (или Cursor): код по коментар, промени в избрания код, компонент от screenshot на прототипа. Доказателство: екрани на телефон.
-6. Testing layer — Claude Code: hooks (тестовете тръгват след промяна), GitHub Actions с `@claude` за ревю на PR. Доказателство: CI, който минава, и ревю в PR.
-- Правилата живеят в CLAUDE.md. Инструкциите за Copilot и правилата за Cursor само препращат към него, без копие.
+Ползваме само Claude Code (абонамент). Сравнението в документа е между различните възможности на Claude Code (и claude.ai чат за прототипа), не между различни продукти.
+1. Database layer — CLAUDE.md като памет на проекта, Plan Mode. Доказателство: entities и миграция по правилата тук.
+2. API и бизнес логика — agentic TDD (първо тестове, които падат, после кодът), subagent `be-expert`. Доказателство: тестове за сумите (`null` цени, `NeedsReview`).
+3. Authentication и роли — Plan Mode, worktree за рисковата промяна. Доказателство: Identity с роли, въведено с малки стъпки.
+4. Портал за възложителя — subagent `portal-reviewer` за ревю срещу изтичане на данни. Доказателство: тест, че друга фирма получава 403/404.
+5. Angular UI — subagent `fe-expert`, Angular CLI MCP, компонент от screenshot на прототипа, проверка в браузъра. Доказателство: екрани на телефон.
+6. Testing layer — hooks (build/тестове след промяна), Testcontainers, GitHub Actions с `@claude` за ревю на PR. Доказателство: CI, който минава, и ревю в PR.
 - Prompt-овете следват шаблона: цел, ограничения, засегнати файлове, „първо план, после чакай одобрение“.
-- След всяка завършена стъпка помогни на Ива да добави запис в `docs/ai-log.md`: модул, prompt (дословно), какво генерира AI, какво е променено ръчно и защо, как е тествано.
+- След всяка завършена функционалност помогни на Ива да добави запис в `docs/ai-log.md` (един запис на функционалност): какво съдържа, решенията от рунда, prompt-овете (дословно), какво генерира AI, какво е променено по решение на Ива и защо, ръчния тест и автоматичните тестове.
 - Пази screenshot-и в `docs/screenshots/` (UI, Swagger/Postman, тестове).
 
 ## Как работим
 По условието на курсовата целият код се пише от AI. Ива не пипа код: тя взема решенията, дава prompt-ове, ревюира и тества. Claude пише кода, пуска командите и проверява резултата сам. Не прави повече от договорената подстъпка; обяснявай избора, давай малки стъпки.
-- Всяка стъпка от реда на работа се разбива на подстъпки (напр. 1.1, 1.2). Започваме подстъпка само след като решенията за нея са изяснени.
+- Работим по функционалност (вертикално: backend + frontend + тестове). За всяка функционалност, преди код:
+  1. Какво съдържа: от какви части се състои (entities, endpoints, екрани, тестове).
+  2. Какво да очаква Ива накрая: какво ще може да прави в приложението.
+  3. Какви решения трябва да се вземат → рунд въпроси със скила `grilling`.
+  4. След кода: как да тества ръчно, стъпка по стъпка (в браузъра, в Scalar).
+- Всяка функционалност се разбива на подстъпки (напр. 2.1, 2.2). Започваме подстъпка само след като решенията за нея са изяснени.
 - Преди подстъпка, в която има решения, ползвай скила `grilling` (`/grill-me`): въпроси на рундове, номерирани, всеки с препоръка, формулирани така, че „да“ приема препоръката. Факти от кода и средата търси сам, не питай за тях.
 - Отговорите са в стила на скила `caveman`: първо отговорът, без излишни думи, всеки технически факт остава. Код, документи, commit-и и `docs/ai-log.md` са с нормален език. Изключва се с „normal mode“.
 - Скиловете са в `.claude/skills/`, копирани от github.com/mattpocock/skills (`grill-me`, `grilling`, MIT) и github.com/JuliusBrussee/caveman (`caveman`, Apache-2.0). Използването им се описва в курсовата работа.

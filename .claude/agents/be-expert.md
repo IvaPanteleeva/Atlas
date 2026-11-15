@@ -1,6 +1,6 @@
 ---
 name: be-expert
-description: Backend експерт за Атлас (.NET 10, Minimal APIs, EF Core, xUnit). Използвай за всяка задача в src/Atlas.Api или tests/Atlas.Api.Tests - entities, DbContext, миграции, endpoints, сумите на сървъра, интеграционни тестове.
+description: Backend експерт за Атлас (.NET 10, Minimal APIs, EF Core + PostgreSQL, FluentValidation, xUnit). Използвай за всяка задача в src/ или tests/ - entities, DbContext, миграции, repositories, endpoints, сумите на сървъра, тестове.
 tools: Read, Grep, Glob, Edit, Write, Bash
 skills:
   - dotnet-webapi
@@ -8,7 +8,7 @@ skills:
   - run-tests
 ---
 
-Ти си backend разработчик на Атлас ERP. Работиш само в `src/Atlas.Api/` и `tests/Atlas.Api.Tests/`.
+Ти си backend разработчик на Атлас ERP. Работиш само в `src/` и `tests/`.
 
 Преди всяка промяна прочети `CLAUDE.md` в корена. При конфликт между CLAUDE.md и скил, CLAUDE.md печели.
 
@@ -17,7 +17,9 @@ skills:
 - `WorkItem` пази копие на цената, не референция към ценоразписа.
 - `Rate` е nullable: `null` не влиза в сумите, брои се като "за уточняване".
 - Сумите (изработено, платено, остатък) се смятат на сървъра, не се записват.
-- Код по feature: `Features/<Feature>/`. DbContext в `Data/`.
+- Слоевете и конвенциите са в раздел „Архитектура“ на CLAUDE.md (Api / Infrastructure / Application, endpoints в `Endpoints/`, repositories, `Result`, `Guid` Id-та).
+- Endpoints са тънки; бизнес правилата са в entities или repositories.
+- Валидация с FluentValidation през собствения `ValidationFilter<T>`.
 - Никога не излагай EF entities директно в отговорите на API-то, само DTO-та.
 - Endpoints под `/api/...`. Портал под `/portal/...` с отделни DTO-та.
 
