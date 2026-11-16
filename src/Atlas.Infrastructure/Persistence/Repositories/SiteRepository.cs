@@ -26,21 +26,30 @@ public sealed class SiteRepository(AtlasDbContext data) : DataRepository<Site>(d
         s.MapUrl,
         s.Note);
 
-    // Ordering is done in SQL (a CASE on the status column): current sites first, then leads, then finished
-    // (CLAUDE.md "Обекти и фирми"). Later the current ones go by their last work day.
+    // Ordering is done in SQL (CLAUDE.md "Плащания и суми"): current sites first, then leads, then finished.
+    // Current sites go by their latest work day, newest first; those without days come last (Postgres puts NULL
+    // first in a descending order, hence the explicit key). Leads and finished sites go by name. Id breaks ties.
     public async Task<IReadOnlyList<SiteListResponse>> ListAsync(CancellationToken cancellationToken)
         => await this.Data.Sites
             .AsNoTracking()
-            .OrderBy(s => s.Status == SiteStatus.Active ? 0 : s.Status == SiteStatus.Lead ? 1 : 2)
-            .ThenBy(s => s.Name)
-            .ThenBy(s => s.Id)
-            .Select(s => new SiteListResponse(
-                s.Id,
-                s.Name,
-                s.Status,
-                s.Company == null ? null : s.Company.Name,
-                s.EndCustomer,
-                s.Address))
+            .Select(s => new
+            {
+                Site = s,
+                LastWorkDate = this.Data.WorkDays.Where(d => d.SiteId == s.Id).Max(d => (DateOnly?)d.Date),
+            })
+            .OrderBy(x => x.Site.Status == SiteStatus.Active ? 0 : x.Site.Status == SiteStatus.Lead ? 1 : 2)
+            .ThenBy(x => x.Site.Status == SiteStatus.Active && x.LastWorkDate == null ? 1 : 0)
+            .ThenByDescending(x => x.Site.Status == SiteStatus.Active ? x.LastWorkDate : null)
+            .ThenBy(x => x.Site.Name)
+            .ThenBy(x => x.Site.Id)
+            .Select(x => new SiteListResponse(
+                x.Site.Id,
+                x.Site.Name,
+                x.Site.Status,
+                x.Site.Company == null ? null : x.Site.Company.Name,
+                x.Site.EndCustomer,
+                x.Site.Address,
+                x.LastWorkDate))
             .ToListAsync(cancellationToken);
 
     public async Task<Result<SiteResponse>> GetAsync(Guid id, CancellationToken cancellationToken)
@@ -106,9 +115,10 @@ public sealed class SiteRepository(AtlasDbContext data) : DataRepository<Site>(d
             return Error.NotFound(NotFoundMessage);
         }
 
-        // A site with records cannot be deleted; it is set to Done instead (CLAUDE.md "Обекти и фирми").
-        // Feature 6: client payments join this check.
-        if (await this.Data.WorkDays.AnyAsync(d => d.SiteId == id, cancellationToken))
+        // A site with records (work days or client payments) cannot be deleted; it is set to Done instead
+        // (CLAUDE.md "Обекти и фирми", "Плащания и суми").
+        if (await this.Data.WorkDays.AnyAsync(d => d.SiteId == id, cancellationToken)
+            || await this.Data.ClientPayments.AnyAsync(p => p.SiteId == id, cancellationToken))
         {
             return Error.Conflict(HasRecordsMessage);
         }
@@ -124,7 +134,7 @@ public sealed class SiteRepository(AtlasDbContext data) : DataRepository<Site>(d
             SqlState: PostgresErrorCodes.ForeignKeyViolation,
         })
         {
-            // A work day was added between the check and the save (the FK is Restrict).
+            // A work day or a payment was added between the check and the save (both FKs are Restrict).
             return Error.Conflict(HasRecordsMessage);
         }
 

@@ -8,7 +8,8 @@ using Atlas.Infrastructure.Entities;
 // Lives next to the entity (not in Application): IRepository<Site> needs the Site type.
 public interface ISiteRepository : IRepository<Site>
 {
-    // All sites: Active, then Lead, then Done; by name inside each group. No note.
+    // All sites with the date of their latest work day: Active (latest work day first, without days last),
+    // then Lead, then Done (both by name). No note, no money.
     Task<IReadOnlyList<SiteListResponse>> ListAsync(CancellationToken cancellationToken);
 
     // NotFound when there is no such site.
@@ -21,6 +22,6 @@ public interface ISiteRepository : IRepository<Site>
     // Replaces all fields. NotFound, or Validation on companyId when the company does not exist.
     Task<Result<SiteResponse>> UpdateAsync(Guid id, UpdateSiteRequest request, CancellationToken cancellationToken);
 
-    // NotFound when there is no such site; Conflict when it has work days (feature 6: or client payments).
+    // NotFound when there is no such site; Conflict when it has work days or client payments.
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken);
 }

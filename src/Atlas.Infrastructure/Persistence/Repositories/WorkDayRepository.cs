@@ -3,6 +3,7 @@ namespace Atlas.Infrastructure.Persistence.Repositories;
 using Atlas.Application.Common;
 using Atlas.Application.Contracts;
 using Atlas.Application.Identity;
+using Atlas.Application.Summaries;
 using Atlas.Application.WorkDays;
 using Atlas.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -136,6 +137,11 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
                 WorkDayRules.Amount(i.Quantity, i.Rate)))
             .ToList();
 
+        // The same rule as the site's sums (SiteSummaryCalculator), so a site's Earned is the sum of its days' totals.
+        var sums = SiteSummaryCalculator.Calculate(
+            day.Items.Select(i => new SummaryItem(i.Quantity, i.Rate, i.NeedsReview)),
+            []);
+
         return new WorkDayResponse(
             day.Id,
             day.SiteId,
@@ -143,8 +149,8 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
             day.Title,
             day.Note,
             items,
-            WorkDayRules.Total(items.Select(i => i.Amount)),
-            items.Count(i => WorkDayRules.IsOpen(i.Rate, i.NeedsReview)));
+            sums.Earned,
+            sums.OpenCount);
     }
 
     // Copies the request onto the day. The item list replaces the old one:

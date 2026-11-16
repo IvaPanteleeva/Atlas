@@ -92,6 +92,36 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.ClientPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SiteId", "Date");
+
+                    b.ToTable("ClientPayments");
+                });
+
             modelBuilder.Entity("Atlas.Infrastructure.Entities.Company", b =>
                 {
                     b.Property<Guid>("Id")
@@ -427,6 +457,17 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.ClientPayment", b =>
+                {
+                    b.HasOne("Atlas.Infrastructure.Entities.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Site");
                 });
 
             modelBuilder.Entity("Atlas.Infrastructure.Entities.Site", b =>

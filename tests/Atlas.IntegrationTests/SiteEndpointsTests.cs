@@ -3,9 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Atlas.Application.Common;
 using Atlas.Application.Companies;
 using Atlas.Application.Identity;
 using Atlas.Application.Sites;
+using Atlas.Application.WorkDays;
 using Atlas.Infrastructure.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -168,8 +170,59 @@ public class SiteEndpointsTests(AtlasApiFactory factory)
 
         var first = sites[0];
         Assert.Equal(
-            new SiteListResponse(first.Id, "А текущ", SiteStatus.Active, Zhenistroy, "Професорът", "ул. „Шипка“ 5"),
+            new SiteListResponse(first.Id, "А текущ", SiteStatus.Active, Zhenistroy, "Професорът", "ул. „Шипка“ 5", null),
             first);
+    }
+
+    // CLAUDE.md "Плащания и суми": current sites by their latest work day (newest first, without days last),
+    // leads and finished ones by name. Group order stays Active, Lead, Done.
+    [Fact]
+    public async Task List_ActiveByLastWorkDate_NewestFirst_WithoutDaysLast_OthersByName()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var today = WorkDayRules.Today(TimeProvider.System);
+        var old = await CreateAsync(owner, new CreateSiteRequest("А стар", SiteStatus.Active));
+        var recent = await CreateAsync(owner, new CreateSiteRequest("Я нов", SiteStatus.Active));
+        await CreateAsync(owner, new CreateSiteRequest("Б без дни", SiteStatus.Active));
+        await CreateAsync(owner, new CreateSiteRequest("А без дни", SiteStatus.Active));
+        var middle = await CreateAsync(owner, new CreateSiteRequest("М среден", SiteStatus.Active));
+        var lead = await CreateAsync(owner, new CreateSiteRequest("Я оглед", SiteStatus.Lead));
+        await CreateAsync(owner, new CreateSiteRequest("А оглед", SiteStatus.Lead));
+        var done = await CreateAsync(owner, new CreateSiteRequest("Я приключен", SiteStatus.Done));
+        await CreateAsync(owner, new CreateSiteRequest("А приключен", SiteStatus.Done));
+
+        await AddDayAsync(owner, old.Id, today.AddDays(-10));
+        await AddDayAsync(owner, recent.Id, today.AddDays(-20));
+        await AddDayAsync(owner, recent.Id, today);
+        await AddDayAsync(owner, middle.Id, today.AddDays(-3));
+        await AddDayAsync(owner, done.Id, today);
+
+        // A new day on a Lead site makes it Active; set it back to Lead to check that leads ignore the date.
+        await AddDayAsync(owner, lead.Id, today);
+        var back = await owner.PutAsJsonAsync(
+            $"/api/sites/{lead.Id}",
+            new UpdateSiteRequest("Я оглед", SiteStatus.Lead),
+            Json);
+        Assert.Equal(HttpStatusCode.OK, back.StatusCode);
+
+        var sites = (await owner.GetFromJsonAsync<SiteListResponse[]>("/api/sites", Json))!;
+
+        Assert.Equal(
+            ["Я нов", "М среден", "А стар", "А без дни", "Б без дни", "А оглед", "Я оглед", "А приключен", "Я приключен"],
+            sites.Select(s => s.Name));
+        Assert.Equal(
+            [today, today.AddDays(-3), today.AddDays(-10), null, null, null, today, null, today],
+            sites.Select(s => s.LastWorkDate));
+    }
+
+    private static async Task AddDayAsync(HttpClient owner, Guid siteId, DateOnly date)
+    {
+        var response = await owner.PostAsJsonAsync(
+            $"/api/sites/{siteId}/workdays",
+            new SaveWorkDayRequest(date, null, null, [new SaveWorkItemRequest(null, null, "Плочки", 1m, Unit.Piece, 10m, false)]),
+            Json);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     [Fact]

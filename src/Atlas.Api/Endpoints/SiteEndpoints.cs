@@ -19,7 +19,9 @@ public static class SiteEndpoints
         group.MapGet("/", GetSites)
             .WithName("GetSites")
             .WithSummary("List sites")
-            .WithDescription("All sites: Active, then Lead, then Done; by name inside each group. Without the note.");
+            .WithDescription(
+                "All sites with their last work date: Active (latest work day first, without days last), then Lead, "
+                + "then Done (both by name). Without the note and without money.");
 
         group.MapGet("/{id:guid}", GetSite)
             .WithName("GetSite")
@@ -47,7 +49,7 @@ public static class SiteEndpoints
             .RequireAuthorization(Policies.Owner)
             .WithName("DeleteSite")
             .WithSummary("Delete a site")
-            .WithDescription("Deletes a site (Owner only). A site with work days cannot be deleted (409); set it to Done.")
+            .WithDescription("Deletes a site (Owner only). A site with work days or payments cannot be deleted (409); set it to Done.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
