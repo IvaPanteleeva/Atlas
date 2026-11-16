@@ -43,6 +43,43 @@ $bottom-nav-height: 56px;
     }
 }
 
+// User menu trigger: icon only on the phone, icon + name from 768px.
+.user {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 44px;
+    min-height: 44px;
+    margin-left: auto;
+    padding: 0 8px;
+    border: 0;
+    background: none;
+    color: var(--band-ink);
+    font: inherit;
+    cursor: pointer;
+
+    nz-icon {
+        font-size: 20px;
+    }
+
+    &:hover,
+    &:focus-visible {
+        color: var(--accent);
+    }
+}
+
+.user__name {
+    display: none;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    @media (min-width: $desktop) {
+        display: inline;
+    }
+}
+
 .hazard {
     height: 6px;
     background: repeating-linear-gradient(-45deg, var(--accent) 0 10px, var(--band) 10px 20px);
@@ -131,4 +168,8 @@ $bottom-nav-height: 56px;
     @media (min-width: $desktop) {
         padding-bottom: 32px;
     }
+}
+
+.content--no-tabs {
+    padding-bottom: 32px;
 }

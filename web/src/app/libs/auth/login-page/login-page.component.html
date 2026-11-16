@@ -1,0 +1,13 @@
+<header class="top">
+    <div class="top__inner">
+        <span class="brand">АТЛАС <small>ДНЕВНИК</small></span>
+    </div>
+    <div class="hazard" aria-hidden="true"></div>
+</header>
+
+<main class="content">
+    <section class="card" aria-labelledby="login-title">
+        <h1 id="login-title">Вход</h1>
+        <atlas-login-form [pending]="store.loginPending()" [error]="store.loginError()" (submitted)="signIn($event)" />
+    </section>
+</main>

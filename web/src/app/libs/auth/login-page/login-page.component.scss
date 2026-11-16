@@ -1,0 +1,62 @@
+// Same dark band as the shell, without tabs; the card is centered and full width on the phone.
+:host {
+    display: block;
+    min-height: 100vh;
+}
+
+.top {
+    background: var(--band);
+    color: var(--band-ink);
+}
+
+.top__inner {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 12px 16px;
+}
+
+.brand {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 26px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    line-height: 1;
+
+    small {
+        font-size: 12px;
+        letter-spacing: 0.2em;
+        color: var(--band-ink);
+        opacity: 0.6;
+    }
+}
+
+.hazard {
+    height: 6px;
+    background: repeating-linear-gradient(-45deg, var(--accent) 0 10px, var(--band) 10px 20px);
+}
+
+.content {
+    padding: 24px 16px;
+
+    @media (min-width: 768px) {
+        padding-top: 64px;
+    }
+}
+
+.card {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+
+    h1 {
+        margin: 0 0 16px;
+        font-size: 24px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+}

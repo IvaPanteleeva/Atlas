@@ -1,0 +1,48 @@
+<form nz-form nzLayout="vertical" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <nz-form-item>
+        <nz-form-label nzFor="login-user-name" nzRequired>Потребителско име</nz-form-label>
+        <nz-form-control nzErrorTip="Въведи потребителско име">
+            <input
+                nz-input
+                id="login-user-name"
+                formControlName="userName"
+                autocomplete="username"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                nzSize="large"
+            />
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="login-password" nzRequired>Парола</nz-form-label>
+        <nz-form-control nzErrorTip="Въведи парола">
+            <nz-input-password [nzVisible]="passwordVisible()" [nzVisibilityToggle]="false">
+                <input
+                    nz-input
+                    id="login-password"
+                    formControlName="password"
+                    autocomplete="current-password"
+                    nzSize="large"
+                />
+                <button
+                    nzInputSuffix
+                    type="button"
+                    class="eye"
+                    [attr.aria-label]="passwordVisible() ? 'Скрий паролата' : 'Покажи паролата'"
+                    [attr.aria-pressed]="passwordVisible()"
+                    (click)="togglePassword()"
+                >
+                    <nz-icon [nzType]="passwordVisible() ? 'eye' : 'eye-invisible'" nzTheme="outline" />
+                </button>
+            </nz-input-password>
+        </nz-form-control>
+    </nz-form-item>
+
+    @if (error(); as message) {
+        <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+    }
+
+    <button nz-button nzType="primary" nzSize="large" nzBlock type="submit" [nzLoading]="pending()">Вход</button>
+</form>

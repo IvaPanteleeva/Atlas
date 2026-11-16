@@ -1,27 +1,55 @@
 import { Location } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
+import { Observable, of, throwError } from 'rxjs';
 import { routes } from '../../../../app.routes';
-import { NAV_ICONS } from '../nav-items';
-import { ShellComponent } from './shell.component';
+import { AuthStore } from '../../../auth/+state/auth.store';
+import { Me, Role } from '../../../auth/auth.model';
+import { AuthService } from '../../../auth/auth.service';
+import { APP_ICONS } from '../../icons';
+
+class FakeAuthService {
+    meResult: Observable<Me> = throwError(() => new HttpErrorResponse({ status: 401 }));
+    logoutCalls = 0;
+
+    me(): Observable<Me> {
+        return this.meResult;
+    }
+
+    logout(): Observable<void> {
+        this.logoutCalls++;
+        return of(undefined);
+    }
+}
 
 describe('ShellComponent', () => {
+    let fake: FakeAuthService;
+
     beforeEach(() => {
+        fake = new FakeAuthService();
         TestBed.configureTestingModule({
-            imports: [ShellComponent],
-            providers: [provideRouter(routes, withComponentInputBinding()), provideNzIcons(NAV_ICONS)],
+            providers: [
+                provideRouter(routes, withComponentInputBinding()),
+                provideNzIcons(APP_ICONS),
+                { provide: AuthService, useValue: fake },
+            ],
         });
     });
 
-    async function render(url: string) {
+    async function render(url: string, role: Role | null = 'Owner', userName = 'iva') {
+        if (role) {
+            fake.meResult = of({ id: '1', userName, role, companyId: null });
+        }
+        await TestBed.inject(AuthStore).loadMe();
         const harness = await RouterTestingHarness.create();
         await harness.navigateByUrl(url);
-        const fixture = TestBed.createComponent(ShellComponent);
-        await fixture.whenStable();
-        return { harness, element: fixture.nativeElement as HTMLElement };
+        return { harness, element: harness.fixture.nativeElement as HTMLElement };
     }
+
+    const path = () => TestBed.inject(Location).path();
 
     it('renders the four tabs with labels and links in both navs', async () => {
         const { element } = await render('/sites');
@@ -34,8 +62,8 @@ describe('ShellComponent', () => {
     });
 
     it('marks the "Хора" tab as current after navigating to /people', async () => {
-        const { harness, element } = await render('/people');
-        expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Хора');
+        const { element } = await render('/people');
+        expect(element.querySelector('.content h1')?.textContent).toBe('Хора');
 
         const current = Array.from(element.querySelectorAll('.tabs--bottom a[aria-current="page"]'));
         expect(current.map((a) => a.textContent?.trim())).toEqual(['Хора']);
@@ -44,8 +72,58 @@ describe('ShellComponent', () => {
     });
 
     it('redirects / to /sites', async () => {
-        const harness = await RouterTestingHarness.create();
-        await harness.navigateByUrl('/');
-        expect(TestBed.inject(Location).path()).toBe('/sites');
+        await render('/');
+        expect(path()).toBe('/sites');
+    });
+
+    it('shows the user name in the user menu', async () => {
+        const { element } = await render('/sites', 'Crew', 'petar');
+
+        expect(element.querySelector('.user__name')?.textContent?.trim()).toBe('petar');
+    });
+
+    it('"Изход" in the user menu signs out and goes to /login', async () => {
+        const { harness, element } = await render('/sites');
+
+        element.querySelector<HTMLButtonElement>('button.user')!.click();
+        // nz-dropdown opens after auditTime(150), in a CDK overlay attached to document.body.
+        const logout = await vi.waitFor(() => {
+            const item = Array.from(document.querySelectorAll<HTMLElement>('[nz-menu-item]')).find(
+                (candidate) => candidate.textContent?.trim() === 'Изход',
+            );
+            expect(item).toBeDefined();
+            return item!;
+        });
+
+        logout.click();
+        await harness.fixture.whenStable();
+
+        expect(fake.logoutCalls).toBe(1);
+        expect(TestBed.inject(AuthStore).isAuthenticated()).toBe(false);
+        expect(path()).toBe('/login');
+    });
+
+    it('ClientViewer sees the portal placeholder without tabs', async () => {
+        const { element } = await render('/portal', 'ClientViewer');
+
+        expect(path()).toBe('/portal');
+        expect(element.querySelector('.content h1')?.textContent).toBe('Порталът идва скоро');
+        expect(element.querySelectorAll('.tabs a').length).toBe(0);
+        expect(element.querySelector('.brand')?.getAttribute('href')).toBe('/portal');
+    });
+
+    it('ClientViewer on a staff route is sent to /portal', async () => {
+        await render('/sites', 'ClientViewer');
+        expect(path()).toBe('/portal');
+    });
+
+    it('Owner on /portal is sent to /sites', async () => {
+        await render('/portal', 'Owner');
+        expect(path()).toBe('/sites');
+    });
+
+    it('an anonymous user is sent to /login with returnUrl', async () => {
+        await render('/people', null);
+        expect(path()).toBe('/login?returnUrl=%2Fpeople');
     });
 });

@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
-import { ShellComponent } from './libs/shared/layout/shell/shell.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
-    imports: [ShellComponent],
+    imports: [RouterOutlet],
     selector: 'atlas-root',
     templateUrl: './app.html',
 })

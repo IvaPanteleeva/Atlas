@@ -1,22 +1,33 @@
 import { registerLocaleData } from '@angular/common';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import bg from '@angular/common/locales/bg';
-import { ApplicationConfig, LOCALE_ID, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+    ApplicationConfig,
+    inject,
+    LOCALE_ID,
+    provideAppInitializer,
+    provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { bg_BG, provideNzI18n } from 'ng-zorro-antd/i18n';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
 import { routes } from './app.routes';
-import { NAV_ICONS } from './libs/shared/layout/nav-items';
+import { AuthStore } from './libs/auth/+state/auth.store';
+import { authInterceptor } from './libs/auth/auth.interceptor';
+import { APP_ICONS } from './libs/shared/icons';
 
 registerLocaleData(bg);
 
 export const appConfig: ApplicationConfig = {
     providers: [
         provideBrowserGlobalErrorListeners(),
+        // One GET /api/auth/me before the first navigation, so the guards know who is signed in.
+        // The loader in index.html stays until this resolves.
+        provideAppInitializer(() => inject(AuthStore).loadMe()),
         provideRouter(routes, withComponentInputBinding()),
-        provideHttpClient(withFetch()),
+        provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
         { provide: LOCALE_ID, useValue: 'bg' },
         provideNzI18n(bg_BG),
-        provideNzIcons(NAV_ICONS),
+        provideNzIcons(APP_ICONS),
     ],
 };

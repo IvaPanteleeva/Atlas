@@ -1,26 +1,54 @@
 <header class="top">
     <div class="top__inner">
-        <a class="brand" routerLink="/sites">АТЛАС <small>ДНЕВНИК</small></a>
-        <nav class="tabs tabs--top" aria-label="Основна навигация">
-            @for (item of navItems; track item.path) {
-                <a class="tabs__link" [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">{{
-                    item.label
-                }}</a>
-            }
-        </nav>
+        <a class="brand" [routerLink]="homeUrl()">АТЛАС <small>ДНЕВНИК</small></a>
+        @if (navItems().length) {
+            <nav class="tabs tabs--top" aria-label="Основна навигация">
+                @for (item of navItems(); track item.path) {
+                    <a
+                        class="tabs__link"
+                        [routerLink]="item.path"
+                        routerLinkActive="active"
+                        ariaCurrentWhenActive="page"
+                        >{{ item.label }}</a
+                    >
+                }
+            </nav>
+        }
+        <button
+            type="button"
+            class="user"
+            nz-dropdown
+            nzTrigger="click"
+            nzPlacement="bottomRight"
+            [nzDropdownMenu]="userMenu"
+            [attr.aria-label]="'Профил: ' + store.user()?.userName"
+        >
+            <nz-icon nzType="user" nzTheme="outline" aria-hidden="true" />
+            <span class="user__name">{{ store.user()?.userName }}</span>
+        </button>
+        <nz-dropdown-menu #userMenu="nzDropdownMenu">
+            <ul nz-menu>
+                <li nz-menu-item (click)="logout()">
+                    <nz-icon nzType="logout" nzTheme="outline" aria-hidden="true" />
+                    Изход
+                </li>
+            </ul>
+        </nz-dropdown-menu>
     </div>
     <div class="hazard" aria-hidden="true"></div>
 </header>
 
-<main class="content">
+<main class="content" [class.content--no-tabs]="!navItems().length">
     <router-outlet />
 </main>
 
-<nav class="tabs tabs--bottom" aria-label="Основна навигация">
-    @for (item of navItems; track item.path) {
-        <a class="tabs__link" [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">
-            <nz-icon [nzType]="item.icon" nzTheme="outline" aria-hidden="true" />
-            <span>{{ item.label }}</span>
-        </a>
-    }
-</nav>
+@if (navItems().length) {
+    <nav class="tabs tabs--bottom" aria-label="Основна навигация">
+        @for (item of navItems(); track item.path) {
+            <a class="tabs__link" [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">
+                <nz-icon [nzType]="item.icon" nzTheme="outline" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+            </a>
+        }
+    </nav>
+}

@@ -1,0 +1,34 @@
+:host {
+    display: block;
+}
+
+.eye {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    // Large touch target on the phone, without growing the input.
+    min-width: 32px;
+    min-height: 32px;
+    margin: -6px -8px -6px 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--ink);
+    }
+}
+
+.error {
+    margin-bottom: 16px;
+}
+
+button[type='submit'] {
+    font-family: var(--f-display);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
