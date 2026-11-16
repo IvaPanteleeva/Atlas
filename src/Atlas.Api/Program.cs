@@ -14,7 +14,7 @@ builder.Services
 
 var app = builder.Build();
 
-await app.ApplyMigrationsAsync();
+await app.InitializeDatabaseAsync();
 
 // Errors are ProblemDetails. In Development the built-in developer exception page
 // (added by WebApplication) answers with ProblemDetails that include the exception;

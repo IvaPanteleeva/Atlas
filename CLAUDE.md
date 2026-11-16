@@ -14,7 +14,8 @@
 Референция е Gemsoft (`/Users/ivaivanova/Projects /Gemsoft`), без нещата там, които са случайни (смесени Id-та, логика в controllers, без валидация, без глобален обработчик на грешки, Newtonsoft).
 
 Backend: 3 проекта, зависимости `Atlas.Api → Atlas.Infrastructure → Atlas.Application`.
-- `Atlas.Application`: DTO-та, enums, `Result`/`Result<T>`, интерфейси (`IRepository<T>`, `I<Feature>Repository`, `ICurrentUser`), FluentValidation validators в `Validation/`.
+- `Atlas.Application`: DTO-та, enums, `Result`/`Result<T>`, общи интерфейси (`IRepository<T>`, `ICurrentUser`), FluentValidation validators в `Validation/`.
+- `I<Feature>Repository` е в `Atlas.Infrastructure/Persistence/Repositories/` до реализацията (като Gemsoft), защото работи с entities, а те са в Infrastructure.
 - `Atlas.Infrastructure`: entities (`Entities/`), `Persistence/AtlasDbContext`, Fluent API конфигурации до всяко entity (`*Configuration.cs`), миграции в `Persistence/Migrations`, repositories. Регистрация със Scrutor по име (`AsMatchingInterface`).
 - `Atlas.Api`: Minimal API endpoints в `Endpoints/<Feature>Endpoints.cs` (статичен клас, `Map<Feature>Endpoints()`, `MapGroup("/api/<feature>")`), `ValidationFilter<T>` (собствен, без пакет), `ResultExtensions` към HTTP резултати, глобален `UseExceptionHandler` с ProblemDetails, DI чрез extension методи по слой.
 - Endpoints са тънки. Бизнес правилата са в методи на entities или в repositories, не в endpoints.
@@ -43,7 +44,7 @@ Frontend: структура като Gemsoft.
   docs/                     ai-log.md, screenshots/ (само локално)
 ```
 - Отделно git repo в тази папка, branch `main`. GitHub: https://github.com/IvaPanteleeva/Atlas — private до предаването на курсовата, после public (линкът е за курсовата).
-- Хостингът се решава след функционалност 9. Дотогава CI прави само build и тестове.
+- Хостинг: Heroku. Деплоят се прави след функционалност 9; дотогава CI прави само build и тестове. За деплоя: Heroku Postgres дава `DATABASE_URL` (`postgres://...`), който трябва да се превърне в connection string за Npgsql; портът идва от `PORT`.
 - Solution е `Atlas.slnx`. Тестовете са описани в „Архитектура“. CI (`.github/workflows/ci.yml`) пуска build и всички тестове при push/PR към `main`. Angular без SSR, със SCSS и routing.
 - EF миграциите се прилагат сами при старт само в Development.
 - Plan Mode преди подстъпки, които създават основа или модел на данните.
@@ -79,6 +80,14 @@ Frontend: структура като Gemsoft.
 - Сумите (изработено, платено, остатък) не се записват, а се смятат на сървъра (`GET /sites/{id}/summary`).
 - `WorkDay` е за една дата; работниците са many-to-many към `Person` (нужно за заплащане по човек).
 - Оферта ≠ свършена работа. По-късно: отделен `Offer`, който се изпълнява в работни дни.
+
+## Вход и роли
+- ASP.NET Core Identity върху `AtlasDbContext`. Вход с потребителско име (имейлът е по избор). Без публична регистрация и без `MapIdentityApi`; собствени endpoints `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` със `SignInManager`.
+- HttpOnly cookie (същият origin), `SameSite=Lax`, API-то приема само JSON. Сесия 30 дни, плъзгаща се. API-то връща 401/403, не пренасочва към login страница.
+- Роли: `Owner` (всичко), `Crew` (екипът; правата се решават по функционалност), `ClientViewer` (възложител, само чете портала, има claim `CompanyId`).
+- Policies: `Owner`, `Staff` (Owner или Crew), `Client` (ClientViewer). По подразбиране всеки `/api/...` иска вход (освен login и health); `/portal/...` иска `Client`.
+- Owner се създава при старт от конфигурация `Seed:Owner:UserName`/`Password`: локално в `appsettings.Development.json` (измислени данни, в git), в production от environment variables (Heroku Config Vars `Seed__Owner__UserName`, `Seed__Owner__Password`). Празните ключове в `appsettings.json` са списъкът какво трябва да се зададе на prod; там не се пишат истински пароли. Owner създава другите потребители през `POST /api/users` и `GET /api/users`; екран за това идва по-късно (с „Хора“).
+- Парола: поне 8 знака, без изисквания за главни букви, цифри и символи. Заключване 5 минути след 5 грешни опита.
 
 ## Достъп за възложителя
 - Роля `ClientViewer` с claim `CompanyId`. Само четене.

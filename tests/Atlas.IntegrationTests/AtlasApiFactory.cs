@@ -13,6 +13,10 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>, IAsyncLife
 {
     private readonly PostgreSqlContainer _database = new PostgreSqlBuilder("postgres:18-alpine").Build();
 
+    public const string TestOwnerUserName = "test-owner";
+
+    public const string TestOwnerPassword = "test-password-123";
+
     private Respawner? _respawner;
 
     public async Task InitializeAsync() => await _database.StartAsync();
@@ -21,9 +25,12 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>, IAsyncLife
     {
         builder.UseSetting("ConnectionStrings:Atlas", _database.GetConnectionString());
         builder.UseSetting("Database:MigrateOnStartup", "true");
+        builder.UseSetting("Seed:Owner:UserName", TestOwnerUserName);
+        builder.UseSetting("Seed:Owner:Password", TestOwnerPassword);
     }
 
-    // Deletes all data between tests, keeps the schema and the migrations history.
+    // Deletes all data between tests, keeps the schema, the migrations history and the seed data
+    // (roles, companies). Users are deleted too, including the Owner seeded at startup.
     public async Task ResetDatabaseAsync()
     {
         await using var connection = new NpgsqlConnection(_database.GetConnectionString());
@@ -37,7 +44,12 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>, IAsyncLife
                 {
                     DbAdapter = DbAdapter.Postgres,
                     SchemasToInclude = ["public"],
-                    TablesToIgnore = [new Table("__EFMigrationsHistory")],
+                    TablesToIgnore =
+                    [
+                        new Table("__EFMigrationsHistory"),
+                        new Table("AspNetRoles"),
+                        new Table("Companies"),
+                    ],
                 });
             }
             catch (InvalidOperationException ex) when (ex.Message.StartsWith("No tables found", StringComparison.Ordinal))
