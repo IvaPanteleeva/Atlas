@@ -55,6 +55,8 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapCompanyEndpoints();
 app.MapSiteEndpoints();
+app.MapServiceEndpoints();
+app.MapSitePriceEndpoints();
 
 // Unknown /api/... routes are 404 ProblemDetails, not index.html.
 // The literal "api" segment makes this more specific than the Angular fallback below.
