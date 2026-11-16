@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import {
+    afterNextRender,
+    ChangeDetectionStrategy,
+    Component,
+    effect,
+    inject,
+    input,
+    signal,
+    untracked,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -12,15 +22,20 @@ import { SitePricesStore } from '../../site-prices/+state/site-prices.store';
 import { CreateSitePriceRequest, SitePrice } from '../../site-prices/site-price.model';
 import { SitePriceFormComponent } from '../../site-prices/site-price-form/site-price-form.component';
 import { SitePriceListComponent } from '../../site-prices/site-price-list/site-price-list.component';
+import { WorkDaysStore } from '../../work-days/+state/work-days.store';
+import { SaveWorkDayRequest, WorkDay } from '../../work-days/work-day.model';
+import { WorkDayFormComponent } from '../../work-days/work-day-form/work-day-form.component';
+import { WorkDayListComponent } from '../../work-days/work-day-list/work-day-list.component';
 import { SitesStore } from '../+state/sites.store';
 import { SaveSiteRequest } from '../site.model';
 import { SiteFormComponent } from '../site-form/site-form.component';
 import { SiteHeaderComponent } from '../site-header/site-header.component';
 
-/** Smart page for one site (/sites/:id): header and "Цени за обекта"; more sections come with their features. */
+/** Smart page for one site (/sites/:id): header, "Работни дни" and "Цени за обекта"; more sections come later. */
 @Component({
     selector: 'atlas-site-detail-page',
     imports: [
+        NgTemplateOutlet,
         RouterLink,
         NzAlertModule,
         NzButtonModule,
@@ -30,6 +45,9 @@ import { SiteHeaderComponent } from '../site-header/site-header.component';
         SiteFormComponent,
         SitePriceListComponent,
         SitePriceFormComponent,
+        WorkDayListComponent,
+        // Only used inside @defer: the form (and the date picker) is a separate lazy chunk.
+        WorkDayFormComponent,
     ],
     templateUrl: './site-detail-page.component.html',
     styleUrl: './site-detail-page.component.scss',
@@ -44,6 +62,7 @@ export class SiteDetailPageComponent {
     protected readonly auth = inject(AuthStore);
     protected readonly prices = inject(SitePricesStore);
     protected readonly services = inject(ServicesStore);
+    protected readonly workDays = inject(WorkDaysStore);
     private readonly router = inject(Router);
 
     protected readonly formOpen = signal(false);
@@ -51,16 +70,32 @@ export class SiteDetailPageComponent {
     protected readonly priceFormOpen = signal(false);
     /** The price being edited; null = a new one. */
     protected readonly editingPrice = signal<SitePrice | null>(null);
+    protected readonly dayFormOpen = signal(false);
+    /** The day being edited; null = a new one. */
+    protected readonly editingDay = signal<WorkDay | null>(null);
 
     constructor() {
+        // Fetch the lazy work day form chunk when the browser is idle, so the first "+ Ден работа" opens quickly.
+        afterNextRender(() => {
+            const prefetch = () =>
+                void import('../../work-days/work-day-form/work-day-form.component').catch(() => undefined);
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(prefetch);
+            } else {
+                setTimeout(prefetch, 2000);
+            }
+        });
+
         effect(() => {
             const id = this.id();
             untracked(() => {
                 this.formOpen.set(false);
                 this.priceFormOpen.set(false);
+                this.dayFormOpen.set(false);
                 void this.store.loadOne(id);
+                void this.workDays.load(id);
                 void this.prices.load(id);
-                // The price form offers services from the shared list.
+                // The price and work day forms offer services from the shared list.
                 void this.services.load();
             });
         });
@@ -128,5 +163,40 @@ export class SiteDetailPageComponent {
         if (editing && (await this.prices.remove(this.id(), editing.id))) {
             this.priceFormOpen.set(false);
         }
+    }
+
+    protected openDayForm(day: WorkDay | null): void {
+        this.workDays.clearErrors();
+        this.editingDay.set(day);
+        this.dayFormOpen.set(true);
+    }
+
+    protected closeDayForm(): void {
+        this.dayFormOpen.set(false);
+    }
+
+    protected async saveDay(request: SaveWorkDayRequest): Promise<void> {
+        const editing = this.editingDay();
+        const saved = editing
+            ? await this.workDays.update(this.id(), editing.id, request)
+            : await this.workDays.create(this.id(), request);
+        if (saved) {
+            this.dayFormOpen.set(false);
+            this.reloadAfterDayChange();
+        }
+    }
+
+    protected async removeDay(): Promise<void> {
+        const editing = this.editingDay();
+        if (editing && (await this.workDays.remove(this.id(), editing.id))) {
+            this.dayFormOpen.set(false);
+            this.reloadAfterDayChange();
+        }
+    }
+
+    /** A new day makes a lead current, so the header is reloaded; the list too, quietly (nothing blinks). */
+    private reloadAfterDayChange(): void {
+        void this.store.refreshOne(this.id());
+        void this.workDays.load(this.id());
     }
 }

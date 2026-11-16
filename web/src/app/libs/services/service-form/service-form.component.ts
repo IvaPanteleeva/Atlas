@@ -20,10 +20,9 @@ import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { FieldErrors } from '../../shared/api-errors';
-import { DecimalKeyboardDirective, parseDecimal } from '../../shared/money-input';
+import { DecimalInputDirective } from '../../shared/decimal-input';
 import { Unit, UNIT_OPTIONS } from '../../shared/units';
 import { MONEY_MAX, MONEY_MIN, SaveServiceRequest, Service, SERVICE_NAME_MAX_LENGTH } from '../service.model';
 
@@ -43,9 +42,8 @@ function notBlank(control: AbstractControl<string>): ValidationErrors | null {
         NzButtonModule,
         NzFormModule,
         NzInputModule,
-        NzInputNumberModule,
         NzSelectModule,
-        DecimalKeyboardDirective,
+        DecimalInputDirective,
     ],
     templateUrl: './service-form.component.html',
     styleUrl: './service-form.component.scss',
@@ -63,9 +61,6 @@ export class ServiceFormComponent {
 
     protected readonly nameMaxLength = SERVICE_NAME_MAX_LENGTH;
     protected readonly units = UNIT_OPTIONS;
-    protected readonly moneyMin = MONEY_MIN;
-    protected readonly moneyMax = MONEY_MAX;
-    protected readonly parseDecimal = parseDecimal;
 
     protected readonly form = inject(NonNullableFormBuilder).group({
         name: ['', [notBlank, Validators.maxLength(SERVICE_NAME_MAX_LENGTH)]],

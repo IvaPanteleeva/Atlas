@@ -12,6 +12,26 @@
     <atlas-site-header [site]="site" />
     <button nz-button nzSize="small" type="button" class="edit" (click)="openForm()">Данни за обекта</button>
 
+    <section class="work-days" aria-labelledby="work-days-title">
+        <div class="sec-head">
+            <h2 id="work-days-title">
+                Работни дни <span class="count num">{{ workDays.days().length }}</span>
+            </h2>
+            <button nz-button nzType="primary" nzSize="small" type="button" (click)="openDayForm(null)">
+                <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
+                Ден работа
+            </button>
+        </div>
+        @if (!dayFormOpen() && workDays.error(); as message) {
+            <nz-alert class="section-error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+        }
+        @if (workDays.loading() && !workDays.days().length) {
+            <p class="note">Зареждане…</p>
+        } @else {
+            <atlas-work-day-list [days]="workDays.days()" (edit)="openDayForm($event)" />
+        }
+    </section>
+
     <section class="prices" aria-labelledby="prices-title">
         <div class="sec-head">
             <h2 id="prices-title">Цени за обекта</h2>
@@ -23,7 +43,7 @@
             }
         </div>
         @if (!priceFormOpen() && prices.error(); as message) {
-            <nz-alert class="prices__error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+            <nz-alert class="section-error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
         }
         @if (prices.loading()) {
             <p class="note">Зареждане…</p>
@@ -58,6 +78,49 @@
                 (delete)="removePrice()"
                 (cancel)="closePriceForm()"
             />
+        </ng-container>
+    </nz-modal>
+
+    <!-- Full screen on the phone (atlas-sheet--full). The form is loaded lazily when the modal opens. -->
+    <nz-modal
+        [nzVisible]="dayFormOpen()"
+        [nzTitle]="editingDay() ? 'Ден работа' : 'Нов ден работа'"
+        [nzFooter]="null"
+        nzWrapClassName="atlas-sheet atlas-sheet--full"
+        nzCentered
+        [nzWidth]="640"
+        [nzMaskClosable]="false"
+        (nzOnCancel)="closeDayForm()"
+    >
+        <ng-container *nzModalContent>
+            @defer (on immediate) {
+                <atlas-work-day-form
+                    [day]="editingDay()"
+                    [services]="services.services()"
+                    [sitePrices]="prices.prices()"
+                    [canEditPrices]="auth.isOwner()"
+                    [canDelete]="auth.isOwner()"
+                    [saving]="workDays.saving()"
+                    [error]="workDays.error()"
+                    [fieldErrors]="workDays.fieldErrors()"
+                    (save)="saveDay($event)"
+                    (delete)="removeDay()"
+                    (cancel)="closeDayForm()"
+                />
+            } @loading {
+                <ng-container [ngTemplateOutlet]="dayFormLoading" />
+            } @placeholder {
+                <ng-container [ngTemplateOutlet]="dayFormLoading" />
+            }
+            <!-- Shown at once while the form chunk loads (the first open on a slow phone can take a moment). -->
+            <ng-template #dayFormLoading>
+                <div class="day-form-loading" role="status">
+                    <span class="note">Зареждане…</span>
+                    <span class="skeleton"></span>
+                    <span class="skeleton"></span>
+                    <span class="skeleton skeleton--card"></span>
+                </div>
+            </ng-template>
         </ng-container>
     </nz-modal>
 

@@ -1,0 +1,60 @@
+@if (rows().length) {
+    <ul class="days">
+        @for (row of rows(); track row.day.id) {
+            <li class="day">
+                <div class="date">
+                    <span class="date__day num">{{ row.dayLabel }}</span>
+                    <span class="date__weekday">{{ row.weekday }}</span>
+                </div>
+                <div class="body">
+                    @if (row.day.title) {
+                        <h3 class="title">{{ row.day.title }}</h3>
+                    }
+                    <table class="items">
+                        <tbody>
+                            @for (entry of row.items; track entry.item.id) {
+                                <tr class="item">
+                                    <td>
+                                        <span class="desc">{{ entry.item.description }}</span>
+                                        @if (entry.item.rate === null) {
+                                            <span class="pill q">цена?</span>
+                                        } @else if (entry.item.needsReview) {
+                                            <span class="pill q">уточни</span>
+                                        }
+                                    </td>
+                                    <td class="calc num">{{ entry.calc }}</td>
+                                    <td class="sum num">
+                                        {{ entry.item.amount === null ? '—' : (entry.item.amount | eur) }}
+                                    </td>
+                                </tr>
+                            }
+                            @if (row.day.items.length > 1) {
+                                <tr class="total">
+                                    <td colspan="2">Общо</td>
+                                    <td class="sum num">{{ row.day.total | eur }}</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (row.day.note) {
+                        <p class="note">{{ row.day.note }}</p>
+                    }
+                    @if (canEdit()) {
+                        <button
+                            nz-button
+                            nzType="text"
+                            nzSize="small"
+                            type="button"
+                            class="edit"
+                            (click)="edit.emit(row.day)"
+                        >
+                            Редакция
+                        </button>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">Няма записани дни. Натисни „+ Ден работа“ след всеки ден на обекта.</p>
+}

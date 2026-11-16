@@ -102,6 +102,24 @@ export const SitesStore = signalStore(
             }
         },
 
+        /**
+         * Reloads the open site quietly (no loading state, nothing hidden), e.g. after a work day changed its status.
+         * A failed reload keeps what is on screen.
+         */
+        async refreshOne(id: string): Promise<void> {
+            try {
+                const site = await firstValueFrom(service.get(id));
+                if (store.selected()?.id === id) {
+                    patchState(store, {
+                        selected: site,
+                        list: sortLikeApi(store.list().map((item) => (item.id === id ? toListItem(site) : item))),
+                    });
+                }
+            } catch {
+                // The site stays as it was; the next full load shows any problem.
+            }
+        },
+
         /** Creates a site. Returns it on success; null on failure (messages in error / fieldErrors). */
         async create(request: SaveSiteRequest): Promise<Site | null> {
             patchState(store, { saving: true, error: null, fieldErrors: {} });

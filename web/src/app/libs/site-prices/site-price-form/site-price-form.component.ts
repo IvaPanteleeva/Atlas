@@ -15,11 +15,11 @@ import { RouterLink } from '@angular/router';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzFormModule } from 'ng-zorro-antd/form';
-import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { MONEY_MAX, MONEY_MIN, Service } from '../../services/service.model';
 import { FieldErrors } from '../../shared/api-errors';
-import { DecimalKeyboardDirective, parseDecimal } from '../../shared/money-input';
+import { DecimalInputDirective } from '../../shared/decimal-input';
 import { UNIT_LABELS } from '../../shared/units';
 import { CreateSitePriceRequest, SitePrice } from '../site-price.model';
 
@@ -38,9 +38,9 @@ const FORM_FIELDS = ['serviceId', 'rate'];
         NzAlertModule,
         NzButtonModule,
         NzFormModule,
-        NzInputNumberModule,
+        NzInputModule,
         NzSelectModule,
-        DecimalKeyboardDirective,
+        DecimalInputDirective,
     ],
     templateUrl: './site-price-form.component.html',
     styleUrl: './site-price-form.component.scss',
@@ -61,9 +61,6 @@ export class SitePriceFormComponent {
     readonly cancel = output<void>();
 
     protected readonly unitLabels = UNIT_LABELS;
-    protected readonly moneyMin = MONEY_MIN;
-    protected readonly moneyMax = MONEY_MAX;
-    protected readonly parseDecimal = parseDecimal;
 
     protected readonly form = inject(NonNullableFormBuilder).group({
         serviceId: ['', Validators.required],

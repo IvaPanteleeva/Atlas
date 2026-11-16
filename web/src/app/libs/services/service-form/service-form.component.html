@@ -7,7 +7,9 @@
         }
     </ng-template>
     <ng-template #rateTip let-control>
-        @if (control.hasError('min')) {
+        @if (control.hasError('number')) {
+            Въведи число
+        } @else if (control.hasError('min')) {
             Цената трябва да е по-голяма от 0
         } @else if (control.hasError('max')) {
             Цената може да е най-много 100 000 €
@@ -48,17 +50,16 @@
     <nz-form-item>
         <nz-form-label nzFor="service-rate">Цена по подразбиране</nz-form-label>
         <nz-form-control [nzErrorTip]="rateTip" nzExtra="По избор. Ползва се, когато обектът няма собствена цена.">
-            <nz-input-number
-                atlasDecimalKeyboard
-                formControlName="defaultRate"
-                nzId="service-rate"
-                nzSuffix="€"
-                [nzMin]="moneyMin"
-                [nzMax]="moneyMax"
-                [nzStep]="0.01"
-                [nzPrecision]="2"
-                [nzParser]="parseDecimal"
-            />
+            <nz-input-wrapper nzSuffix="€">
+                <input
+                    nz-input
+                    atlasDecimalInput
+                    id="service-rate"
+                    formControlName="defaultRate"
+                    [decimals]="2"
+                    [fixedDecimals]="true"
+                />
+            </nz-input-wrapper>
             @if (serverError('defaultRate'); as message) {
                 <div class="server-error">{{ message }}</div>
             }

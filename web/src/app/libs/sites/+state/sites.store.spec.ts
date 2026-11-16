@@ -158,6 +158,31 @@ describe('SitesStore', () => {
         expect(store.error()).toBe('Грешка при зареждане на обекта');
     });
 
+    it('refreshOne reloads the open site without hiding it, and updates its list item', async () => {
+        await loaded([item({ id: 's1', status: 'Lead' })]);
+        await store.loadOne('s1');
+        fake.getResult = of(site({ status: 'Active' }));
+
+        const pending = store.refreshOne('s1');
+        expect(store.selected()?.status).toBe('Lead');
+        expect(store.loading()).toBe(false);
+        await pending;
+
+        expect(fake.calls).toEqual(['list', 'get s1', 'get s1']);
+        expect(store.selected()?.status).toBe('Active');
+        expect(store.list()[0].status).toBe('Active');
+    });
+
+    it('refreshOne keeps the site on screen when the reload fails', async () => {
+        await store.loadOne('s1');
+        fake.getResult = httpError(500);
+
+        await store.refreshOne('s1');
+
+        expect(store.selected()?.name).toBe('Професора');
+        expect(store.error()).toBeNull();
+    });
+
     it('create returns the site, selects it and adds it to the list in API order', async () => {
         await loaded([
             item({ id: 'a', name: 'Алфа', status: 'Active' }),

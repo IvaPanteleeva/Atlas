@@ -61,7 +61,7 @@ describe('ServiceFormComponent', () => {
         expect(field('service-name').placeholder).toBe('напр. Шпакловка');
         expect(field('service-name').maxLength).toBe(200);
         expect(field('service-rate')).toBeTruthy();
-        expect(element.querySelector('nz-input-number')?.textContent).toContain('€');
+        expect(element.querySelector('nz-input-wrapper')?.textContent).toContain('€');
         expect(element.textContent).toContain('По избор. Ползва се, когато обектът няма собствена цена.');
     });
 
@@ -129,7 +129,7 @@ describe('ServiceFormComponent', () => {
 
         expect(field('service-name').value).toBe('Шпакловка');
         expect(selectedUnit()).toBe('м.л.');
-        expect(field('service-rate').value).toBe('6.50');
+        expect(field('service-rate').value).toBe('6,50');
 
         await submit();
 
@@ -160,7 +160,7 @@ describe('ServiceFormComponent', () => {
         await set('error', 'Тази услуга вече я има');
 
         expect(field('service-name').closest('nz-form-item')?.textContent).toContain('Името е твърде дълго');
-        expect(element.querySelector('nz-input-number')?.closest('nz-form-item')?.textContent).toContain(
+        expect(element.querySelector('nz-input-wrapper')?.closest('nz-form-item')?.textContent).toContain(
             'Невалидна цена',
         );
         const alert = element.querySelector('nz-alert')?.textContent;

@@ -1,0 +1,167 @@
+:host {
+    display: block;
+}
+
+// Same panel as the other lists: surface, 1px line, radius 8px.
+.days,
+.empty {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.days {
+    padding: 0;
+    list-style: none;
+
+    li + li {
+        border-top: 1px solid var(--line);
+    }
+}
+
+.empty {
+    padding: 16px;
+    color: var(--muted);
+}
+
+// Prototype day row: date column 64px, content beside it.
+.day {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 4px;
+    padding: 14px 16px 10px 12px;
+}
+
+.date {
+    display: flex;
+    flex-direction: column;
+    padding-top: 1px;
+}
+
+.date__day {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.date__weekday {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.title {
+    margin: 0 0 6px;
+    font-family: var(--f-body);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+
+    td {
+        padding: 5px 0;
+        vertical-align: baseline;
+    }
+
+    td + td {
+        padding-left: 10px;
+    }
+
+    .item + .item td {
+        border-top: 1px dashed var(--line);
+    }
+}
+
+// Break only words that do not fit at all (not "Шпакло-вка" in the middle of a short word).
+.desc {
+    overflow-wrap: break-word;
+}
+
+.calc {
+    color: var(--muted);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.sum {
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.total td {
+    border-top: 1px solid var(--ink);
+    font-weight: 600;
+}
+
+// Phone: the description gets its own line, "12,5 м² × 6,50" and the sum go under it.
+@media (max-width: 559px) {
+    .items,
+    .items tbody {
+        display: block;
+    }
+
+    .item,
+    .total {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 10px;
+        padding: 5px 0;
+    }
+
+    .items td,
+    .items td + td,
+    .items .item + .item td,
+    .total td {
+        padding: 0;
+        border: 0;
+    }
+
+    .item td:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .item .calc {
+        text-align: left;
+    }
+
+    .item + .item {
+        border-top: 1px dashed var(--line);
+    }
+
+    .total {
+        border-top: 1px solid var(--ink);
+    }
+}
+
+.pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 18px;
+    white-space: nowrap;
+}
+
+.pill.q {
+    background: var(--warn-soft);
+    color: var(--warn);
+}
+
+.note {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 13.5px;
+    white-space: pre-wrap;
+}
+
+.edit {
+    min-height: 36px;
+    margin: 4px 0 0 -7px;
+    color: var(--muted);
+}

@@ -7,6 +7,11 @@ function camelCase(key: string): string {
     return key ? key[0].toLowerCase() + key.slice(1) : key;
 }
 
+/** "Items[0].Quantity" -> "items[0].quantity": every segment of a nested key, as the form names its fields. */
+function camelCasePath(key: string): string {
+    return key.split('.').map(camelCase).join('.');
+}
+
 export function isNotFound(error: unknown): boolean {
     return error instanceof HttpErrorResponse && error.status === 404;
 }
@@ -21,7 +26,7 @@ export function describeError(error: unknown, fallback: string): { error: string
                 (message): message is string => typeof message === 'string' && !!message.trim(),
             );
             if (first) {
-                fieldErrors[camelCase(key)] = first;
+                fieldErrors[camelCasePath(key)] = first;
             }
         }
         if (Object.keys(fieldErrors).length) {

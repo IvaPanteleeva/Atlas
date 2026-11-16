@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { ANIMATION_MODULE_TYPE } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
@@ -17,11 +17,14 @@ import { SitePricesService } from '../../site-prices/site-prices.service';
 import { FakeSitePricesService, testSitePrice } from '../../site-prices/testing/fake-site-prices.service';
 import { SitesService } from '../sites.service';
 import { FakeSitesService, httpError, testSite } from '../testing/fake-sites.service';
+import { FakeWorkDaysService, testWorkDay } from '../../work-days/testing/fake-work-days.service';
+import { WorkDaysService } from '../../work-days/work-days.service';
 
 describe('SiteDetailPageComponent', () => {
     let fake: FakeSitesService;
     let prices: FakeSitePricesService;
     let services: FakeServicesService;
+    let workDays: FakeWorkDaysService;
     let role: Role;
 
     beforeAll(() => {
@@ -32,6 +35,7 @@ describe('SiteDetailPageComponent', () => {
         fake = new FakeSitesService();
         prices = new FakeSitePricesService();
         services = new FakeServicesService();
+        workDays = new FakeWorkDaysService();
         role = 'Owner';
         TestBed.configureTestingModule({
             providers: [
@@ -47,6 +51,7 @@ describe('SiteDetailPageComponent', () => {
                 { provide: CompaniesService, useValue: { list: () => of([{ id: 'c1', name: 'Женистрой' }]) } },
                 { provide: SitePricesService, useValue: prices },
                 { provide: ServicesService, useValue: services },
+                { provide: WorkDaysService, useValue: workDays },
             ],
         });
     });
@@ -273,6 +278,129 @@ describe('SiteDetailPageComponent', () => {
             expect(prices.calls).toContain('remove s1 p1');
             await vi.waitFor(() => expect(priceForm()).toBeNull());
             expect(rowNames(page)).toEqual([]);
+        });
+    });
+    describe('"Работни дни"', () => {
+        const section = (page: HTMLElement) => page.querySelector<HTMLElement>('section.work-days')!;
+        const dayForm = () => document.querySelector<HTMLElement>('.atlas-sheet atlas-work-day-form');
+
+        async function waitForDayForm() {
+            return vi.waitFor(() => {
+                const form = dayForm();
+                expect(form).toBeTruthy();
+                return form!;
+            });
+        }
+
+        async function type(harness: RouterTestingHarness, input: HTMLInputElement, value: string) {
+            input.value = value;
+            input.dispatchEvent(new Event('input'));
+            await harness.fixture.whenStable();
+        }
+
+        it('loads the days of the site and shows them above "Цени за обекта", with the count', async () => {
+            workDays.listResult = of([
+                testWorkDay({ id: 'd2', date: '2026-11-14', title: 'Боядисване' }),
+                testWorkDay({ id: 'd1', date: '2026-11-10' }),
+            ]);
+
+            const { page } = await render();
+
+            expect(workDays.calls).toEqual(['list s1']);
+            const sections = Array.from(page.querySelectorAll('section')).map((s) => s.className);
+            expect(sections.indexOf('work-days')).toBeLessThan(sections.indexOf('prices'));
+            expect(section(page).querySelector('h2')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Работни дни 2');
+            expect(section(page).querySelectorAll('.day').length).toBe(2);
+        });
+
+        it('shows the empty state', async () => {
+            const { page } = await render();
+
+            expect(section(page).textContent).toContain(
+                'Няма записани дни. Натисни „+ Ден работа“ след всеки ден на обекта.',
+            );
+        });
+
+        it('the sheet shows a loading state (placeholder and loading) until the form chunk is there', async () => {
+            TestBed.configureTestingModule({ deferBlockBehavior: DeferBlockBehavior.Manual });
+            const { harness, page } = await render();
+            const loading = () => document.querySelector<HTMLElement>('.atlas-sheet .day-form-loading');
+
+            button(section(page), 'Ден работа')!.click();
+            await harness.fixture.whenStable();
+            const block = await vi.waitFor(async () => {
+                const blocks = await harness.fixture.getDeferBlocks();
+                expect(blocks.length).toBe(1);
+                return blocks[0];
+            });
+
+            await block.render(DeferBlockState.Placeholder);
+            expect(loading()?.getAttribute('role')).toBe('status');
+            expect(loading()?.textContent).toContain('Зареждане…');
+            expect(dayForm()).toBeNull();
+
+            await block.render(DeferBlockState.Loading);
+            expect(loading()?.textContent).toContain('Зареждане…');
+
+            await block.render(DeferBlockState.Complete);
+            await waitForDayForm();
+            expect(loading()).toBeNull();
+        });
+
+        it('Crew adds and edits days but sees no delete', async () => {
+            role = 'Crew';
+            workDays.listResult = of([testWorkDay()]);
+            const { harness, page } = await render();
+
+            expect(button(section(page), 'Ден работа')).toBeDefined();
+            button(section(page), 'Редакция')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForDayForm();
+
+            expect(button(form, 'Запази')).toBeDefined();
+            expect(button(form, 'Изтрий')).toBeUndefined();
+            expect(form.querySelector<HTMLInputElement>('#wd-item-0-rate')!.disabled).toBe(true);
+        });
+
+        it('a new day is saved, listed, and the site is reloaded (a lead becomes current)', async () => {
+            fake.getResult = of(testSite({ status: 'Lead' }));
+            const { harness, page } = await render();
+            fake.getResult = of(testSite({ status: 'Active' }));
+
+            button(section(page), 'Ден работа')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForDayForm();
+            await type(harness, form.querySelector<HTMLInputElement>('#wd-item-0-description')!, 'Къртене');
+            await type(harness, form.querySelector<HTMLInputElement>('#wd-item-0-quantity')!, '1');
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+
+            expect(workDays.calls.filter((call) => call.startsWith('create s1'))).toHaveLength(1);
+            expect(workDays.lastRequest?.items[0].description).toBe('Къртене');
+            await vi.waitFor(() => expect(dayForm()).toBeNull());
+            await vi.waitFor(() => expect(fake.calls).toEqual(['get s1', 'get s1']));
+            await harness.fixture.whenStable();
+            expect(page.querySelector('atlas-site-header')?.textContent).toContain('Текущ');
+            expect(workDays.calls.at(-1)).toBe('list s1');
+        });
+
+        it('Owner deletes a day after confirming', async () => {
+            workDays.listResult = of([testWorkDay({ id: 'd1' })]);
+            const { harness, page } = await render();
+            workDays.listResult = of([]);
+
+            button(section(page), 'Редакция')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForDayForm();
+            button(form, 'Изтрий')!.click();
+            await harness.fixture.whenStable();
+            button(form, 'Потвърди изтриване')!.click();
+            await harness.fixture.whenStable();
+
+            expect(workDays.calls).toContain('remove s1 d1');
+            await vi.waitFor(() => expect(dayForm()).toBeNull());
+            await harness.fixture.whenStable();
+            expect(section(page).querySelectorAll('.day').length).toBe(0);
         });
     });
 });

@@ -90,7 +90,7 @@ describe('SitePriceFormComponent', () => {
     it('choosing a service prefills its default price', async () => {
         await choose('Шпакловка · м²');
 
-        expect(rate().value).toBe('8.50');
+        expect(rate().value).toBe('8,50');
         await submit();
         expect(saved).toEqual([{ serviceId: 'sv3', rate: 8.5 }]);
     });
@@ -118,6 +118,17 @@ describe('SitePriceFormComponent', () => {
         expect(saved).toEqual([{ serviceId: 'sv3', rate: 9 }]);
     });
 
+    it('a price that is not a number is an error and is not saved', async () => {
+        await choose('Шпакловка · м²');
+        await typeRate('8,5 лв');
+
+        await submit();
+
+        expect(saved).toEqual([]);
+        expect(rate().value).toBe('8,5 лв');
+        expect(rate().closest('nz-form-item')?.textContent).toContain('Въведи число');
+    });
+
     it('requires a service', async () => {
         await typeRate('5');
 
@@ -134,7 +145,7 @@ describe('SitePriceFormComponent', () => {
         expect(element.querySelector('#price-service')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
             'Боядисване · м²',
         );
-        expect(rate().value).toBe('6.50');
+        expect(rate().value).toBe('6,50');
 
         await typeRate('7');
         await submit();

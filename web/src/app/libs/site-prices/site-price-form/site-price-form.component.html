@@ -14,7 +14,9 @@
 } @else {
     <form nz-form nzLayout="vertical" [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <ng-template #rateTip let-control>
-            @if (control.hasError('required')) {
+            @if (control.hasError('number')) {
+                Въведи число
+            } @else if (control.hasError('required')) {
                 Въведи цена
             } @else if (control.hasError('min')) {
                 Цената трябва да е по-голяма от 0
@@ -53,17 +55,16 @@
         <nz-form-item>
             <nz-form-label nzFor="price-rate" nzRequired>Цена</nz-form-label>
             <nz-form-control [nzErrorTip]="rateTip">
-                <nz-input-number
-                    atlasDecimalKeyboard
-                    formControlName="rate"
-                    nzId="price-rate"
-                    nzSuffix="€"
-                    [nzMin]="moneyMin"
-                    [nzMax]="moneyMax"
-                    [nzStep]="0.01"
-                    [nzPrecision]="2"
-                    [nzParser]="parseDecimal"
-                />
+                <nz-input-wrapper nzSuffix="€">
+                    <input
+                        nz-input
+                        atlasDecimalInput
+                        id="price-rate"
+                        formControlName="rate"
+                        [decimals]="2"
+                        [fixedDecimals]="true"
+                    />
+                </nz-input-wrapper>
                 @if (serverError('rate'); as message) {
                     <div class="server-error">{{ message }}</div>
                 }

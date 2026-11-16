@@ -8,12 +8,8 @@ nz-form-item {
 
 input[nz-input],
 nz-select,
-nz-input-number {
+nz-input-wrapper {
     min-height: 40px;
-}
-
-nz-input-number {
-    width: 100%;
 }
 
 .server-error {
