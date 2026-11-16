@@ -178,7 +178,8 @@ export class SiteFormComponent {
             for (const control of Object.values(this.form.controls)) {
                 control.markAsDirty();
                 control.markAsTouched();
-                control.updateValueAndValidity({ emitEvent: false });
+                // With events: nz-form-control shows the error tip on statusChanges, also for untouched fields.
+                control.updateValueAndValidity();
             }
             return;
         }

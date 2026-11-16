@@ -1,0 +1,30 @@
+@if (services().length) {
+    <ul class="services">
+        @for (service of services(); track service.id) {
+            <li>
+                @if (canEdit()) {
+                    <button type="button" class="service service--button" (click)="open.emit(service)">
+                        <span class="name">{{ service.name }}</span>
+                        <span class="price num" [class.price--none]="service.defaultRate === null">
+                            {{ priceText(service) }}
+                        </span>
+                    </button>
+                } @else {
+                    <div class="service">
+                        <span class="name">{{ service.name }}</span>
+                        <span class="price num" [class.price--none]="service.defaultRate === null">
+                            {{ priceText(service) }}
+                        </span>
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">
+        Още няма услуги.
+        @if (canEdit()) {
+            Добави първата с „+ Нова услуга“.
+        }
+    </p>
+}

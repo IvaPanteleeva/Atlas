@@ -118,6 +118,13 @@ describe('SiteFormComponent', () => {
         expect(element.textContent).toContain('Въведи име на обекта');
     });
 
+    it('shows the name error on submit even when the field was never touched', async () => {
+        await submit();
+
+        expect(saved).toEqual([]);
+        expect(element.textContent).toContain('Въведи име на обекта');
+    });
+
     it('sends trimmed values and empty optional fields as null', async () => {
         await type('site-name', '  Професора ');
         await type('site-address', '   ');

@@ -10,6 +10,7 @@ import { AuthStore } from '../../../auth/+state/auth.store';
 import { Me, Role } from '../../../auth/auth.model';
 import { AuthService } from '../../../auth/auth.service';
 import { CompaniesService } from '../../../companies/companies.service';
+import { ServicesService } from '../../../services/services.service';
 import { SitesService } from '../../../sites/sites.service';
 import { APP_ICONS } from '../../icons';
 
@@ -40,6 +41,7 @@ describe('ShellComponent', () => {
                 { provide: CompaniesService, useValue: { list: () => of([]) } },
                 // /sites is the start page; it loads the list.
                 { provide: SitesService, useValue: { list: () => of([]) } },
+                { provide: ServicesService, useValue: { list: () => of([]) } },
             ],
         });
     });
@@ -61,8 +63,8 @@ describe('ShellComponent', () => {
 
         for (const selector of ['.tabs--top', '.tabs--bottom']) {
             const links = Array.from(element.querySelectorAll<HTMLAnchorElement>(`${selector} a`));
-            expect(links.map((a) => a.textContent?.trim())).toEqual(['Обекти', 'Хора', 'Задачи', 'Цени']);
-            expect(links.map((a) => a.getAttribute('href'))).toEqual(['/sites', '/people', '/tasks', '/rate-card']);
+            expect(links.map((a) => a.textContent?.trim())).toEqual(['Обекти', 'Хора', 'Задачи', 'Услуги']);
+            expect(links.map((a) => a.getAttribute('href'))).toEqual(['/sites', '/people', '/tasks', '/services']);
         }
     });
 
@@ -74,6 +76,13 @@ describe('ShellComponent', () => {
         expect(current.map((a) => a.textContent?.trim())).toEqual(['Хора']);
         const currentTop = element.querySelector('.tabs--top a[aria-current="page"]');
         expect(currentTop?.textContent?.trim()).toBe('Хора');
+    });
+
+    it('the old /rate-card link goes to /services, and the "Услуги" tab is current', async () => {
+        const { element } = await render('/rate-card');
+
+        expect(path()).toBe('/services');
+        expect(element.querySelector('.tabs--bottom a[aria-current="page"]')?.textContent?.trim()).toBe('Услуги');
     });
 
     it('redirects / to /sites', async () => {

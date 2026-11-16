@@ -27,3 +27,32 @@
     color: var(--ink);
     text-decoration: underline;
 }
+
+// "Цени за обекта": prototype h2 (small uppercase section title) with the action on the right.
+.prices {
+    margin-top: 28px;
+}
+
+.sec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+
+    h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    button {
+        min-height: 36px;
+    }
+}
+
+.prices__error {
+    margin-bottom: 10px;
+}

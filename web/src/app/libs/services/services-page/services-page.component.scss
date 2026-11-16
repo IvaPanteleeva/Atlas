@@ -1,0 +1,37 @@
+:host {
+    display: block;
+}
+
+// Prototype .sec-head: page title on the left, main action on the right.
+.sec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+
+    h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    button {
+        min-height: 40px;
+    }
+}
+
+.intro {
+    margin: 0 0 16px;
+    color: var(--muted);
+}
+
+.error {
+    margin-bottom: 12px;
+}
+
+.note {
+    color: var(--muted);
+}

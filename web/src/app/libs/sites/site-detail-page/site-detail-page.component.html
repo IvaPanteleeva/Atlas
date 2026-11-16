@@ -12,6 +12,55 @@
     <atlas-site-header [site]="site" />
     <button nz-button nzSize="small" type="button" class="edit" (click)="openForm()">Данни за обекта</button>
 
+    <section class="prices" aria-labelledby="prices-title">
+        <div class="sec-head">
+            <h2 id="prices-title">Цени за обекта</h2>
+            @if (auth.isOwner()) {
+                <button nz-button nzSize="small" type="button" (click)="openPriceForm(null)">
+                    <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
+                    Цена
+                </button>
+            }
+        </div>
+        @if (!priceFormOpen() && prices.error(); as message) {
+            <nz-alert class="prices__error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+        }
+        @if (prices.loading()) {
+            <p class="note">Зареждане…</p>
+        } @else {
+            <atlas-site-price-list
+                [prices]="prices.prices()"
+                [canEdit]="auth.isOwner()"
+                (open)="openPriceForm($event)"
+            />
+        }
+    </section>
+
+    <nz-modal
+        [nzVisible]="priceFormOpen()"
+        [nzTitle]="editingPrice() ? 'Цена за обекта' : 'Нова цена'"
+        [nzFooter]="null"
+        nzWrapClassName="atlas-sheet"
+        nzCentered
+        [nzWidth]="560"
+        [nzMaskClosable]="false"
+        (nzOnCancel)="closePriceForm()"
+    >
+        <ng-container *nzModalContent>
+            <atlas-site-price-form
+                [price]="editingPrice()"
+                [services]="services.services()"
+                [prices]="prices.prices()"
+                [saving]="prices.saving()"
+                [error]="prices.error()"
+                [fieldErrors]="prices.fieldErrors()"
+                (save)="savePrice($event)"
+                (delete)="removePrice()"
+                (cancel)="closePriceForm()"
+            />
+        </ng-container>
+    </nz-modal>
+
     <nz-modal
         [nzVisible]="formOpen()"
         nzTitle="Данни за обекта"

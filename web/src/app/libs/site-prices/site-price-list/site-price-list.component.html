@@ -1,0 +1,27 @@
+@if (prices().length) {
+    <ul class="prices">
+        @for (price of prices(); track price.id) {
+            <li>
+                @if (canEdit()) {
+                    <button type="button" class="price price--button" (click)="open.emit(price)">
+                        <span class="label">
+                            <span class="name">{{ price.serviceName }}</span>
+                            <span class="unit"> · {{ unitLabels[price.unit] }}</span>
+                        </span>
+                        <span class="rate num">{{ price.rate | eur }}</span>
+                    </button>
+                } @else {
+                    <div class="price">
+                        <span class="label">
+                            <span class="name">{{ price.serviceName }}</span>
+                            <span class="unit"> · {{ unitLabels[price.unit] }}</span>
+                        </span>
+                        <span class="rate num">{{ price.rate | eur }}</span>
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">Няма договорени цени. При работа се ползва цената по подразбиране на услугата.</p>
+}

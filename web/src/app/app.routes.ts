@@ -49,12 +49,16 @@ export const routes: Routes = [
                 loadComponent: placeholderPage,
             },
             {
-                path: 'rate-card',
-                title: 'Цени · Атлас',
-                data: { title: 'Цени' },
+                path: 'services',
+                title: 'Услуги · Атлас',
                 canActivate: [staffGuard],
-                loadComponent: placeholderPage,
+                loadComponent: () =>
+                    import('./libs/services/services-page/services-page.component').then(
+                        (m) => m.ServicesPageComponent,
+                    ),
             },
+            // The tab used to be "Цени" (/rate-card); old links and bookmarks still work.
+            { path: 'rate-card', redirectTo: 'services' },
             {
                 path: 'companies',
                 title: 'Фирми · Атлас',

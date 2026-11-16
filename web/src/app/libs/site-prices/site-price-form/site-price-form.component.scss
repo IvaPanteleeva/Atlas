@@ -1,0 +1,74 @@
+:host {
+    display: block;
+}
+
+nz-form-item {
+    margin-bottom: 14px;
+}
+
+input[nz-input],
+nz-select,
+nz-input-number {
+    min-height: 40px;
+}
+
+nz-input-number {
+    width: 100%;
+}
+
+.server-error {
+    margin-top: 4px;
+    color: var(--warn);
+    font-size: 13px;
+}
+
+.error {
+    margin-bottom: 14px;
+}
+
+// Same footer as the site form: delete on the left, Отказ + Запази on the right.
+.footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+
+    button {
+        min-height: 40px;
+    }
+}
+
+.footer__delete {
+    min-width: 0;
+    height: auto;
+    white-space: normal;
+    line-height: 1.2;
+}
+
+.footer__actions {
+    display: flex;
+    flex: none;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.readonly {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--sunk);
+}
+
+.nothing {
+    margin: 0 0 16px;
+    color: var(--muted);
+
+    a {
+        color: var(--ink);
+        text-decoration: underline;
+    }
+}
