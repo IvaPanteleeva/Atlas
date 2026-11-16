@@ -113,8 +113,7 @@ public sealed class CompanyRepository(AtlasDbContext data) : DataRepository<Comp
             return true;
         }
 
-        // 3.2: add the Sites check here (a company with sites cannot be deleted).
-        return false;
+        return await this.Data.Sites.AnyAsync(s => s.CompanyId == id, cancellationToken);
     }
 
     // Case-insensitive: "Женистрой ЕООД" and "ЖЕНИСТРОЙ ЕООД" are the same company (decided in 3.1).

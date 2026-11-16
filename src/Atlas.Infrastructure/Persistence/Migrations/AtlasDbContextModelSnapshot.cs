@@ -118,6 +118,48 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.Site", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EndCustomer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("MapUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.ToTable("Sites");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
@@ -249,6 +291,16 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Atlas.Infrastructure.Entities.AtlasUser", b =>
+                {
+                    b.HasOne("Atlas.Infrastructure.Entities.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.Site", b =>
                 {
                     b.HasOne("Atlas.Infrastructure.Entities.Company", "Company")
                         .WithMany()

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Atlas.Api.Configuration;
 using Atlas.Api.Endpoints;
 using Atlas.Application;
@@ -8,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+
+// Enums travel as strings ("Lead", not 0), in the JSON and in the OpenAPI document.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services
     .AddApplication(builder.Configuration)
     .AddInfrastructure(builder.Configuration)
@@ -49,6 +54,7 @@ app.MapHealthEndpoints();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapCompanyEndpoints();
+app.MapSiteEndpoints();
 
 // Unknown /api/... routes are 404 ProblemDetails, not index.html.
 // The literal "api" segment makes this more specific than the Angular fallback below.

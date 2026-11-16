@@ -23,6 +23,6 @@ public interface ICompanyRepository : IRepository<Company>
     // NotFound, or Conflict when another company already has the (trimmed) name.
     Task<Result<CompanyResponse>> RenameAsync(Guid id, UpdateCompanyRequest request, CancellationToken cancellationToken);
 
-    // NotFound, or Conflict while anything still points to the company (users; sites from 3.2).
+    // NotFound, or Conflict while anything still points to the company (users, sites).
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken);
 }
