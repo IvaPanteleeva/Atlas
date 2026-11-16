@@ -1,4 +1,5 @@
 import {
+    ArrowLeftOutline,
     BankOutline,
     CheckOutline,
     CheckSquareOutline,
@@ -9,6 +10,7 @@ import {
     EyeOutline,
     HomeOutline,
     LogoutOutline,
+    PlusOutline,
     TagOutline,
     TeamOutline,
     UserOutline,
@@ -32,4 +34,7 @@ export const APP_ICONS = [
     DeleteOutline,
     CheckOutline,
     CloseOutline,
+    // Sites
+    PlusOutline,
+    ArrowLeftOutline,
 ];

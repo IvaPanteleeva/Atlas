@@ -10,6 +10,7 @@ import { AuthStore } from '../../../auth/+state/auth.store';
 import { Me, Role } from '../../../auth/auth.model';
 import { AuthService } from '../../../auth/auth.service';
 import { CompaniesService } from '../../../companies/companies.service';
+import { SitesService } from '../../../sites/sites.service';
 import { APP_ICONS } from '../../icons';
 
 class FakeAuthService {
@@ -37,6 +38,8 @@ describe('ShellComponent', () => {
                 provideNzIcons(APP_ICONS),
                 { provide: AuthService, useValue: fake },
                 { provide: CompaniesService, useValue: { list: () => of([]) } },
+                // /sites is the start page; it loads the list.
+                { provide: SitesService, useValue: { list: () => of([]) } },
             ],
         });
     });

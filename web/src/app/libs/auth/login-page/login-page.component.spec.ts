@@ -10,6 +10,7 @@ import { APP_ICONS } from '../../shared/icons';
 import { AuthStore } from '../+state/auth.store';
 import { Me, Role } from '../auth.model';
 import { AuthService } from '../auth.service';
+import { SitesService } from '../../sites/sites.service';
 
 class FakeAuthService {
     loginResult: Observable<Me> = of({ id: '1', userName: 'iva', role: 'Owner', companyId: null });
@@ -33,6 +34,8 @@ describe('LoginPageComponent', () => {
                 provideRouter(routes, withComponentInputBinding()),
                 provideNzIcons(APP_ICONS),
                 { provide: AuthService, useValue: fake },
+                // /sites is the start page; it loads the list.
+                { provide: SitesService, useValue: { list: () => of([]) } },
             ],
         });
         await TestBed.inject(AuthStore).loadMe();

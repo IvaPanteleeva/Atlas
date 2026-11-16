@@ -1,0 +1,44 @@
+<div class="sec-head">
+    <h1>Обекти</h1>
+    <button nz-button nzType="primary" type="button" (click)="openForm()">
+        <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
+        Нов обект
+    </button>
+</div>
+
+@if (!formOpen() && store.error(); as message) {
+    <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+}
+
+@if (store.loading() && !store.list().length) {
+    <p class="note">Зареждане…</p>
+} @else {
+    <atlas-site-list [sites]="store.list()" (open)="openSite($event)" />
+}
+
+<nz-modal
+    [nzVisible]="formOpen()"
+    nzTitle="Нов обект"
+    [nzFooter]="null"
+    nzWrapClassName="atlas-sheet"
+    nzCentered
+    [nzWidth]="560"
+    [nzMaskClosable]="false"
+    (nzOnCancel)="closeForm()"
+>
+    <ng-container *nzModalContent>
+        <atlas-site-form
+            [companies]="companies.companies()"
+            [canCreateCompany]="auth.isOwner()"
+            [saving]="store.saving()"
+            [error]="store.error()"
+            [fieldErrors]="store.fieldErrors()"
+            [createdCompany]="createdCompany()"
+            [companySaving]="companies.saving()"
+            [companyError]="companies.error()"
+            (save)="save($event)"
+            (createCompany)="createCompany($event)"
+            (cancel)="closeForm()"
+        />
+    </ng-container>
+</nz-modal>

@@ -1,0 +1,20 @@
+<div class="title">
+    <h1>{{ site().name }}</h1>
+    <atlas-site-status-tag [status]="site().status" />
+</div>
+
+@if (meta() || site().mapUrl) {
+    <p class="meta">
+        {{ meta() }}
+        @if (site().mapUrl; as url) {
+            @if (meta()) {
+                ·
+            }
+            <a [href]="url" target="_blank" rel="noopener noreferrer">карта ↗</a>
+        }
+    </p>
+}
+
+@if (site().note; as note) {
+    <p class="note">{{ note }}</p>
+}

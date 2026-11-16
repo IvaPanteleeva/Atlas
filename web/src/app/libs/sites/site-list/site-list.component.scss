@@ -1,0 +1,67 @@
+:host {
+    display: block;
+}
+
+// Prototype .sites panel: surface, 1px line, radius 8px.
+.sites,
+.empty {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.sites {
+    padding: 0;
+    list-style: none;
+    overflow: hidden;
+
+    li + li {
+        border-top: 1px solid var(--line);
+    }
+}
+
+.site {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--sunk);
+    }
+}
+
+.site__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.name {
+    font-family: var(--f-display);
+    font-size: 19px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.meta {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.empty {
+    padding: 16px;
+    color: var(--muted);
+}

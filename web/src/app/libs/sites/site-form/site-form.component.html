@@ -1,0 +1,188 @@
+<form nz-form nzLayout="vertical" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <ng-template #errorTip let-control>
+        @if (control.hasError('required')) {
+            Въведи име на обекта
+        } @else if (control.hasError('url')) {
+            Линкът трябва да започва с http:// или https://
+        } @else if (control.hasError('maxlength')) {
+            Най-много {{ control.getError('maxlength').requiredLength }} знака
+        }
+    </ng-template>
+
+    <nz-form-item>
+        <nz-form-label nzFor="site-name" nzRequired>Име на обекта</nz-form-label>
+        <nz-form-control [nzErrorTip]="errorTip">
+            <input
+                nz-input
+                id="site-name"
+                formControlName="name"
+                placeholder="напр. Професора"
+                autocomplete="off"
+                [maxLength]="maxLengths.name"
+            />
+            @if (serverError('name'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="site-status">Статус</nz-form-label>
+        <nz-form-control>
+            <nz-select id="site-status" formControlName="status" nzId="site-status-input">
+                @for (status of statuses; track status.value) {
+                    <nz-option [nzValue]="status.value" [nzLabel]="status.label" />
+                }
+            </nz-select>
+            @if (serverError('status'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="site-company">Фирма</nz-form-label>
+        <nz-form-control>
+            <nz-select id="site-company" formControlName="companyId" nzId="site-company-input">
+                <nz-option [nzValue]="noCompany" nzLabel="Без фирма" />
+                @for (company of companies(); track company.id) {
+                    <nz-option [nzValue]="company.id" [nzLabel]="company.name" />
+                }
+                @if (canCreateCompany()) {
+                    <nz-option [nzValue]="newCompany" nzLabel="+ Нова фирма" />
+                }
+            </nz-select>
+            @if (serverError('companyId'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+        @if (addingCompany()) {
+            <div class="new-company">
+                <div class="new-company__row">
+                    <input
+                        nz-input
+                        id="site-new-company"
+                        placeholder="Име на новата фирма"
+                        aria-label="Име на новата фирма"
+                        autocomplete="off"
+                        [maxLength]="companyNameMaxLength"
+                        [value]="newCompanyName()"
+                        (input)="newCompanyName.set($any($event.target).value)"
+                        (keydown.enter)="$event.preventDefault(); addCompany()"
+                        (keydown.escape)="closeNewCompany()"
+                    />
+                    <button
+                        nz-button
+                        type="button"
+                        [disabled]="!canAddCompany()"
+                        [nzLoading]="companySaving()"
+                        (click)="addCompany()"
+                    >
+                        Добави
+                    </button>
+                    <button nz-button nzType="text" type="button" aria-label="Затвори" (click)="closeNewCompany()">
+                        <nz-icon nzType="close" nzTheme="outline" aria-hidden="true" />
+                    </button>
+                </div>
+                @if (companyError(); as message) {
+                    <div class="server-error" role="alert">{{ message }}</div>
+                }
+            </div>
+        }
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="site-end-customer">Краен клиент</nz-form-label>
+        <nz-form-control [nzErrorTip]="errorTip">
+            <input
+                nz-input
+                id="site-end-customer"
+                formControlName="endCustomer"
+                autocomplete="off"
+                [maxLength]="maxLengths.endCustomer"
+            />
+            @if (serverError('endCustomer'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="site-address">Адрес</nz-form-label>
+        <nz-form-control [nzErrorTip]="errorTip">
+            <input
+                nz-input
+                id="site-address"
+                formControlName="address"
+                autocomplete="off"
+                [maxLength]="maxLengths.address"
+            />
+            @if (serverError('address'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="site-map-url">Линк към карта</nz-form-label>
+        <nz-form-control [nzErrorTip]="errorTip">
+            <input
+                nz-input
+                id="site-map-url"
+                type="url"
+                inputmode="url"
+                formControlName="mapUrl"
+                placeholder="https://maps.app.goo.gl/…"
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+                [maxLength]="maxLengths.mapUrl"
+            />
+            @if (serverError('mapUrl'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="site-note">Бележка</nz-form-label>
+        <nz-form-control [nzErrorTip]="errorTip" nzExtra="Само за нас, не се вижда от възложителя">
+            <textarea nz-input id="site-note" formControlName="note" rows="3" [maxLength]="maxLengths.note"></textarea>
+            @if (serverError('note'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    @if (error() || otherErrors().length) {
+        <nz-alert class="error" nzType="error" nzShowIcon role="alert" [nzMessage]="alertText" />
+        <ng-template #alertText>
+            @if (error(); as message) {
+                <div>{{ message }}</div>
+            }
+            @for (message of otherErrors(); track $index) {
+                <div>{{ message }}</div>
+            }
+        </ng-template>
+    }
+
+    <div class="footer">
+        @if (canDelete()) {
+            <button
+                nz-button
+                nzDanger
+                type="button"
+                class="footer__delete"
+                [nzType]="confirmingDelete() ? 'primary' : 'default'"
+                [disabled]="saving()"
+                (click)="requestDelete()"
+            >
+                {{ confirmingDelete() ? 'Потвърди изтриване' : 'Изтрий' }}
+            </button>
+        }
+        <div class="footer__actions">
+            <button nz-button type="button" [disabled]="saving()" (click)="cancel.emit()">Отказ</button>
+            <button nz-button nzType="primary" type="submit" [nzLoading]="saving()">Запази</button>
+        </div>
+    </div>
+</form>

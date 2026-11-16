@@ -1,0 +1,19 @@
+@if (sites().length) {
+    <ul class="sites">
+        @for (site of sites(); track site.id) {
+            <li>
+                <button type="button" class="site" (click)="open.emit(site.id)">
+                    <span class="site__text">
+                        <span class="name">{{ site.name }}</span>
+                        @if (meta(site); as text) {
+                            <span class="meta">{{ text }}</span>
+                        }
+                    </span>
+                    <atlas-site-status-tag [status]="site.status" />
+                </button>
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">Още няма обекти. Добави първия с „+ Нов обект“.</p>
+}

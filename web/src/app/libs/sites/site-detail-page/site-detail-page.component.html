@@ -1,0 +1,48 @@
+<a nz-button nzType="text" class="back" routerLink="/sites">
+    <nz-icon nzType="arrow-left" nzTheme="outline" aria-hidden="true" />
+    Всички обекти
+</a>
+
+@if (store.notFound()) {
+    <div class="not-found">
+        <p>Няма такъв обект.</p>
+        <a routerLink="/sites">Към всички обекти</a>
+    </div>
+} @else if (store.selected(); as site) {
+    <atlas-site-header [site]="site" />
+    <button nz-button nzSize="small" type="button" class="edit" (click)="openForm()">Данни за обекта</button>
+
+    <nz-modal
+        [nzVisible]="formOpen()"
+        nzTitle="Данни за обекта"
+        [nzFooter]="null"
+        nzWrapClassName="atlas-sheet"
+        nzCentered
+        [nzWidth]="560"
+        [nzMaskClosable]="false"
+        (nzOnCancel)="closeForm()"
+    >
+        <ng-container *nzModalContent>
+            <atlas-site-form
+                [site]="site"
+                [companies]="companies.companies()"
+                [canCreateCompany]="auth.isOwner()"
+                [canDelete]="auth.isOwner()"
+                [saving]="store.saving()"
+                [error]="store.error()"
+                [fieldErrors]="store.fieldErrors()"
+                [createdCompany]="createdCompany()"
+                [companySaving]="companies.saving()"
+                [companyError]="companies.error()"
+                (save)="save($event)"
+                (createCompany)="createCompany($event)"
+                (delete)="remove()"
+                (cancel)="closeForm()"
+            />
+        </ng-container>
+    </nz-modal>
+} @else if (store.loading()) {
+    <p class="note">Зареждане…</p>
+} @else if (store.error(); as message) {
+    <nz-alert nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+}

@@ -9,6 +9,7 @@ import { AuthStore } from './libs/auth/+state/auth.store';
 import { Me } from './libs/auth/auth.model';
 import { AuthService } from './libs/auth/auth.service';
 import { APP_ICONS } from './libs/shared/icons';
+import { SitesService } from './libs/sites/sites.service';
 
 describe('App', () => {
     let meResult: Observable<Me>;
@@ -21,6 +22,8 @@ describe('App', () => {
                 provideRouter(routes, withComponentInputBinding()),
                 provideNzIcons(APP_ICONS),
                 { provide: AuthService, useValue: { me: () => meResult } },
+                // /sites is the start page; it loads the list.
+                { provide: SitesService, useValue: { list: () => of([]) } },
             ],
         }).compileComponents();
     });

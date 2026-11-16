@@ -21,9 +21,18 @@ export const routes: Routes = [
             {
                 path: 'sites',
                 title: 'Обекти · Атлас',
-                data: { title: 'Обекти' },
                 canActivate: [staffGuard],
-                loadComponent: placeholderPage,
+                loadComponent: () =>
+                    import('./libs/sites/sites-page/sites-page.component').then((m) => m.SitesPageComponent),
+            },
+            {
+                path: 'sites/:id',
+                title: 'Обект · Атлас',
+                canActivate: [staffGuard],
+                loadComponent: () =>
+                    import('./libs/sites/site-detail-page/site-detail-page.component').then(
+                        (m) => m.SiteDetailPageComponent,
+                    ),
             },
             {
                 path: 'people',

@@ -1,0 +1,29 @@
+:host {
+    display: block;
+}
+
+.back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    margin: 0 0 8px -15px;
+    color: var(--muted);
+
+    &:hover {
+        color: var(--ink);
+    }
+}
+
+.edit {
+    margin-top: 14px;
+}
+
+.note,
+.not-found p {
+    color: var(--muted);
+}
+
+.not-found a {
+    color: var(--ink);
+    text-decoration: underline;
+}
