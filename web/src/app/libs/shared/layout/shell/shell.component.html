@@ -28,6 +28,14 @@
         </button>
         <nz-dropdown-menu #userMenu="nzDropdownMenu">
             <ul nz-menu>
+                @if (store.isOwner()) {
+                    <li nz-menu-item>
+                        <a routerLink="/companies">
+                            <nz-icon nzType="bank" nzTheme="outline" aria-hidden="true" />
+                            Фирми
+                        </a>
+                    </li>
+                }
                 <li nz-menu-item (click)="logout()">
                     <nz-icon nzType="logout" nzTheme="outline" aria-hidden="true" />
                     Изход

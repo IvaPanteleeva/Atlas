@@ -31,3 +31,9 @@ export const staffGuard: CanActivateFn = () => {
 export const clientGuard: CanActivateFn = () => {
     return inject(AuthStore).isClient() ? true : inject(Router).parseUrl('/sites');
 };
+
+/** Owner-only pages (e.g. Фирми); everyone else goes to their start page. */
+export const ownerGuard: CanActivateFn = () => {
+    const store = inject(AuthStore);
+    return store.isOwner() ? true : inject(Router).parseUrl(homeUrlFor(store.role()));
+};

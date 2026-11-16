@@ -1,0 +1,44 @@
+// One line on the phone: name takes the space, icon buttons keep a 44px touch target.
+:host {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 52px;
+    padding: 4px 8px 4px 16px;
+}
+
+.name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.icon-button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 18px;
+}
+
+.edit {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 6px 0;
+}
+
+.edit__input {
+    flex: 1 1 200px;
+    min-height: 40px;
+}
+
+// Same height as the input next to them (40px), so the row lines up.
+.edit__actions {
+    display: flex;
+    gap: 8px;
+
+    button {
+        min-height: 40px;
+    }
+}

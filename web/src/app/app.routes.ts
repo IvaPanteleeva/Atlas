@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, clientGuard, guestGuard, staffGuard } from './libs/auth/auth.guards';
+import { authGuard, clientGuard, guestGuard, ownerGuard, staffGuard } from './libs/auth/auth.guards';
 
 const placeholderPage = () =>
     import('./libs/shared/placeholder-page/placeholder-page.component').then((m) => m.PlaceholderPageComponent);
@@ -45,6 +45,15 @@ export const routes: Routes = [
                 data: { title: 'Цени' },
                 canActivate: [staffGuard],
                 loadComponent: placeholderPage,
+            },
+            {
+                path: 'companies',
+                title: 'Фирми · Атлас',
+                canActivate: [ownerGuard],
+                loadComponent: () =>
+                    import('./libs/companies/companies-page/companies-page.component').then(
+                        (m) => m.CompaniesPageComponent,
+                    ),
             },
             {
                 path: 'portal',

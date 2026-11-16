@@ -58,6 +58,18 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>, IAsyncLife
             });
 
             await _respawner.ResetAsync(connection);
+
+            // Companies is ignored above to keep the seed; companies added by tests go,
+            // and the seed gets its name back in case a test renamed it.
+            await using var companies = new NpgsqlCommand(
+                """
+                DELETE FROM "Companies" WHERE "Id" <> @zhenistroy;
+                UPDATE "Companies" SET "Name" = @zhenistroyName WHERE "Id" = @zhenistroy;
+                """,
+                connection);
+            companies.Parameters.AddWithValue("zhenistroy", CompanyConfiguration.ZhenistroyId);
+            companies.Parameters.AddWithValue("zhenistroyName", CompanyConfiguration.ZhenistroyName);
+            await companies.ExecuteNonQueryAsync();
         }
 
         using var scope = Services.CreateScope();

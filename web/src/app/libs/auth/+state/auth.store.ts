@@ -41,6 +41,7 @@ export const AuthStore = signalStore(
         isAuthenticated: computed(() => status() === 'authenticated'),
         role: computed(() => user()?.role ?? null),
         isStaff: computed(() => user()?.role === 'Owner' || user()?.role === 'Crew'),
+        isOwner: computed(() => user()?.role === 'Owner'),
         isClient: computed(() => user()?.role === 'ClientViewer'),
     })),
     withMethods((store, service = inject(AuthService)) => ({

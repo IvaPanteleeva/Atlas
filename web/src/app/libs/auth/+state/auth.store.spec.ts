@@ -57,6 +57,7 @@ describe('AuthStore', () => {
         expect(store.isAuthenticated()).toBe(true);
         expect(store.role()).toBe('Owner');
         expect(store.isStaff()).toBe(true);
+        expect(store.isOwner()).toBe(true);
         expect(store.isClient()).toBe(false);
     });
 
@@ -86,6 +87,7 @@ describe('AuthStore', () => {
         expect(store.status()).toBe('authenticated');
         expect(store.isClient()).toBe(true);
         expect(store.isStaff()).toBe(false);
+        expect(store.isOwner()).toBe(false);
         expect(store.loginPending()).toBe(false);
         expect(store.loginError()).toBeNull();
     });

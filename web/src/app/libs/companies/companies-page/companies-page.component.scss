@@ -1,0 +1,49 @@
+:host {
+    display: block;
+}
+
+h1 {
+    margin: 0 0 4px;
+    font-size: 24px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.lead {
+    margin: 0 0 16px;
+    color: var(--muted);
+}
+
+.error {
+    margin-bottom: 12px;
+}
+
+// Prototype panel: surface, 1px line, radius 8px; rows separated by the same line.
+.panel {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li + li {
+        border-top: 1px solid var(--line);
+    }
+}
+
+.note {
+    margin: 0;
+    padding: 16px;
+    color: var(--muted);
+}
+
+.add {
+    border-top: 1px solid var(--line);
+    background: var(--sunk);
+}

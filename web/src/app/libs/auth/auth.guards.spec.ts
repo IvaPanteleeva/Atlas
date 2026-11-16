@@ -11,7 +11,7 @@ import {
 } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthStore } from './+state/auth.store';
-import { authGuard, clientGuard, guestGuard, homeUrlFor, staffGuard } from './auth.guards';
+import { authGuard, clientGuard, guestGuard, homeUrlFor, ownerGuard, staffGuard } from './auth.guards';
 import { Me, Role } from './auth.model';
 import { AuthService } from './auth.service';
 
@@ -115,6 +115,26 @@ describe('auth guards', () => {
             await signInAs('ClientViewer');
 
             expect(run(() => clientGuard(route, state('/portal')))).toBe(true);
+        });
+    });
+
+    describe('ownerGuard', () => {
+        it('lets Owner through', async () => {
+            await signInAs('Owner');
+
+            expect(run(() => ownerGuard(route, state('/companies')))).toBe(true);
+        });
+
+        it('sends Crew to /sites', async () => {
+            await signInAs('Crew');
+
+            expect(serialize(run(() => ownerGuard(route, state('/companies'))))).toBe('/sites');
+        });
+
+        it('sends ClientViewer to /portal', async () => {
+            await signInAs('ClientViewer');
+
+            expect(serialize(run(() => ownerGuard(route, state('/companies'))))).toBe('/portal');
         });
     });
 });

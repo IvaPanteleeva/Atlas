@@ -1,0 +1,64 @@
+@if (editing()) {
+    <div class="edit">
+        <input
+            #nameInput
+            nz-input
+            class="edit__input"
+            aria-label="Име на фирмата"
+            autocomplete="off"
+            [maxLength]="maxLength"
+            [value]="draft()"
+            (input)="draft.set($any($event.target).value)"
+            (keydown.enter)="save()"
+            (keydown.escape)="editCancel.emit()"
+        />
+        <div class="edit__actions">
+            <button
+                nz-button
+                nzType="primary"
+                type="button"
+                [disabled]="!canSave()"
+                [nzLoading]="saving()"
+                (click)="save()"
+            >
+                <nz-icon nzType="check" nzTheme="outline" aria-hidden="true" />
+                Запази
+            </button>
+            <button nz-button type="button" [disabled]="saving()" (click)="editCancel.emit()">
+                <nz-icon nzType="close" nzTheme="outline" aria-hidden="true" />
+                Отказ
+            </button>
+        </div>
+    </div>
+} @else {
+    <span class="name">{{ company().name }}</span>
+    <button
+        nz-button
+        nzType="text"
+        type="button"
+        class="icon-button"
+        aria-label="Преименувай"
+        [disabled]="saving()"
+        (click)="editStart.emit()"
+    >
+        <nz-icon nzType="edit" nzTheme="outline" aria-hidden="true" />
+    </button>
+    <button
+        nz-button
+        nzType="text"
+        nzDanger
+        type="button"
+        class="icon-button"
+        aria-label="Изтрий"
+        [disabled]="saving()"
+        nz-popconfirm
+        nzPopconfirmTitle="Изтриване на фирмата?"
+        nzOkText="Изтрий"
+        nzCancelText="Отказ"
+        nzOkDanger
+        nzPopconfirmPlacement="topRight"
+        (nzOnConfirm)="removed.emit()"
+    >
+        <nz-icon nzType="delete" nzTheme="outline" aria-hidden="true" />
+    </button>
+}

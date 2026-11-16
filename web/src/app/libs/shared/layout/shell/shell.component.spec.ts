@@ -9,6 +9,7 @@ import { routes } from '../../../../app.routes';
 import { AuthStore } from '../../../auth/+state/auth.store';
 import { Me, Role } from '../../../auth/auth.model';
 import { AuthService } from '../../../auth/auth.service';
+import { CompaniesService } from '../../../companies/companies.service';
 import { APP_ICONS } from '../../icons';
 
 class FakeAuthService {
@@ -35,6 +36,7 @@ describe('ShellComponent', () => {
                 provideRouter(routes, withComponentInputBinding()),
                 provideNzIcons(APP_ICONS),
                 { provide: AuthService, useValue: fake },
+                { provide: CompaniesService, useValue: { list: () => of([]) } },
             ],
         });
     });
@@ -82,19 +84,23 @@ describe('ShellComponent', () => {
         expect(element.querySelector('.user__name')?.textContent?.trim()).toBe('petar');
     });
 
+    /** Opens the user dropdown and returns the texts of its items once it is rendered. */
+    async function openUserMenu(element: HTMLElement): Promise<HTMLElement[]> {
+        element.querySelector<HTMLButtonElement>('button.user')!.click();
+        // nz-dropdown opens after auditTime(150), in a CDK overlay attached to document.body.
+        return vi.waitFor(() => {
+            const items = Array.from(document.querySelectorAll<HTMLElement>('[nz-menu-item]'));
+            expect(items.some((item) => item.textContent?.trim() === 'Изход')).toBe(true);
+            return items;
+        });
+    }
+
+    const itemText = (item: HTMLElement) => item.textContent?.trim();
+
     it('"Изход" in the user menu signs out and goes to /login', async () => {
         const { harness, element } = await render('/sites');
 
-        element.querySelector<HTMLButtonElement>('button.user')!.click();
-        // nz-dropdown opens after auditTime(150), in a CDK overlay attached to document.body.
-        const logout = await vi.waitFor(() => {
-            const item = Array.from(document.querySelectorAll<HTMLElement>('[nz-menu-item]')).find(
-                (candidate) => candidate.textContent?.trim() === 'Изход',
-            );
-            expect(item).toBeDefined();
-            return item!;
-        });
-
+        const logout = (await openUserMenu(element)).find((item) => itemText(item) === 'Изход')!;
         logout.click();
         await harness.fixture.whenStable();
 
@@ -125,5 +131,30 @@ describe('ShellComponent', () => {
     it('an anonymous user is sent to /login with returnUrl', async () => {
         await render('/people', null);
         expect(path()).toBe('/login?returnUrl=%2Fpeople');
+    });
+
+    it('Owner has "Фирми" above "Изход" in the user menu, and it opens /companies', async () => {
+        const { harness, element } = await render('/sites', 'Owner');
+
+        const items = await openUserMenu(element);
+        expect(items.map(itemText)).toEqual(['Фирми', 'Изход']);
+
+        items[0].querySelector<HTMLAnchorElement>('a')!.click();
+        await harness.fixture.whenStable();
+
+        expect(path()).toBe('/companies');
+    });
+
+    it('Crew has no "Фирми" in the user menu', async () => {
+        const { element } = await render('/sites', 'Crew');
+
+        const items = await openUserMenu(element);
+
+        expect(items.map(itemText)).toEqual(['Изход']);
+    });
+
+    it('Crew opening /companies is sent to /sites', async () => {
+        await render('/companies', 'Crew');
+        expect(path()).toBe('/sites');
     });
 });

@@ -1,0 +1,14 @@
+<input
+    nz-input
+    class="add__input"
+    placeholder="Нова фирма…"
+    aria-label="Нова фирма"
+    autocomplete="off"
+    [maxLength]="maxLength"
+    [value]="name()"
+    (input)="name.set($any($event.target).value)"
+    (keydown.enter)="add()"
+/>
+<button nz-button nzType="primary" type="button" [disabled]="!canAdd()" [nzLoading]="saving()" (click)="add()">
+    Добави
+</button>

@@ -1,0 +1,40 @@
+<h1>Фирми</h1>
+<p class="lead">Фирмите, които ни възлагат работа. Използват се в обектите и в портала.</p>
+
+@if (store.error(); as message) {
+    <nz-alert
+        class="error"
+        nzType="error"
+        [nzMessage]="message"
+        nzShowIcon
+        nzCloseable
+        role="alert"
+        (nzOnClose)="store.clearError()"
+    />
+}
+
+<section class="panel" aria-label="Фирми">
+    @if (store.companies().length) {
+        <ul class="list">
+            @for (company of store.companies(); track company.id) {
+                <li>
+                    <atlas-company-row
+                        [company]="company"
+                        [editing]="editingId() === company.id"
+                        [saving]="store.saving()"
+                        (editStart)="startEdit(company.id)"
+                        (editCancel)="cancelEdit()"
+                        (renamed)="rename(company.id, $event)"
+                        (removed)="remove(company.id)"
+                    />
+                </li>
+            }
+        </ul>
+    } @else if (store.loading()) {
+        <p class="note">Зареждане…</p>
+    } @else {
+        <p class="note">Няма фирми.</p>
+    }
+
+    <atlas-company-add class="add" [(name)]="newName" [saving]="store.saving()" (added)="add($event)" />
+</section>
