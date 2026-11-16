@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 // Runs on every start, in every environment. Creates only what is missing, so it never duplicates.
 // The Owner comes from configuration: appsettings.Development.json locally (throwaway values),
 // environment variables in production (Heroku Config Vars Seed__Owner__UserName / Seed__Owner__Password).
-// Empty values in appsettings.json count as missing.
+// Empty values in appsettings.json count as missing; that is only warned about while no Owner exists.
 public sealed class IdentitySeeder(
     RoleManager<IdentityRole<Guid>> roleManager,
     UserManager<AtlasUser> userManager,
@@ -41,8 +41,14 @@ public sealed class IdentitySeeder(
 
         if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
         {
-            logger.LogWarning(
-                "Owner не е конфигуриран: липсват Seed:Owner:UserName и/или Seed:Owner:Password. Owner не е създаден.");
+            // Without config it is a problem only if nobody can sign in as Owner (e.g. a new database).
+            // Once an Owner exists (created earlier or through POST /api/users), the config may be removed.
+            if ((await userManager.GetUsersInRoleAsync(Roles.Owner)).Count == 0)
+            {
+                logger.LogWarning(
+                    "Owner не е конфигуриран: липсват Seed:Owner:UserName и/или Seed:Owner:Password, а потребител с роля Owner няма. Owner не е създаден.");
+            }
+
             return;
         }
 

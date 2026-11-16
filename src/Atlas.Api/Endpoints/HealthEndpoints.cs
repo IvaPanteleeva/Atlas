@@ -8,7 +8,10 @@ public static class HealthEndpoints
 {
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/health").WithTags("Health");
+        // Anonymous: monitoring and the deploy check call it without a login.
+        var group = app.MapGroup("/api/health")
+            .WithTags("Health")
+            .AllowAnonymous();
 
         group.MapGet("/", GetHealth)
             .WithName("GetHealth")

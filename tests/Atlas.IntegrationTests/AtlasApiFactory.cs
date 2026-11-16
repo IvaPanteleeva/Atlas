@@ -1,5 +1,10 @@
+using System.Net.Http.Json;
+using Atlas.Infrastructure.Entities;
+using Atlas.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Respawn;
 using Respawn.Graph;
@@ -30,38 +35,63 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>, IAsyncLife
     }
 
     // Deletes all data between tests, keeps the schema, the migrations history and the seed data
-    // (roles, companies). Users are deleted too, including the Owner seeded at startup.
+    // (roles, companies). Users are deleted too, so the startup seed runs again to bring back the test Owner.
     public async Task ResetDatabaseAsync()
     {
-        await using var connection = new NpgsqlConnection(_database.GetConnectionString());
-        await connection.OpenAsync();
+        // Starts the app if no test has done it yet: the migrations run on startup, Respawn needs the tables.
+        _ = Services;
 
-        if (_respawner is null)
+        await using (var connection = new NpgsqlConnection(_database.GetConnectionString()))
         {
-            try
+            await connection.OpenAsync();
+
+            _respawner ??= await Respawner.CreateAsync(connection, new RespawnerOptions
             {
-                _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
-                {
-                    DbAdapter = DbAdapter.Postgres,
-                    SchemasToInclude = ["public"],
-                    TablesToIgnore =
-                    [
-                        new Table("__EFMigrationsHistory"),
-                        new Table("AspNetRoles"),
-                        new Table("Companies"),
-                    ],
-                });
-            }
-            catch (InvalidOperationException ex) when (ex.Message.StartsWith("No tables found", StringComparison.Ordinal))
-            {
-                // No entities/migrations yet, so there is nothing to clean. Respawn throws in this case;
-                // the respawner is not cached, so it is created once the first tables exist.
-                return;
-            }
+                DbAdapter = DbAdapter.Postgres,
+                SchemasToInclude = ["public"],
+                TablesToIgnore =
+                [
+                    new Table("__EFMigrationsHistory"),
+                    new Table("AspNetRoles"),
+                    new Table("Companies"),
+                ],
+            });
+
+            await _respawner.ResetAsync(connection);
         }
 
-        await _respawner.ResetAsync(connection);
+        using var scope = Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
     }
+
+    // Creates a user directly through UserManager (no HTTP), e.g. a Crew member for a 403 test.
+    public async Task<AtlasUser> CreateUserAsync(string userName, string password, string role, Guid? companyId = null)
+    {
+        using var scope = Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AtlasUser>>();
+
+        var user = new AtlasUser { UserName = userName, CompanyId = companyId };
+        var created = await userManager.CreateAsync(user, password);
+        Assert.True(created.Succeeded, string.Join(", ", created.Errors.Select(e => e.Description)));
+        var inRole = await userManager.AddToRoleAsync(user, role);
+        Assert.True(inRole.Succeeded, string.Join(", ", inRole.Errors.Select(e => e.Description)));
+
+        return user;
+    }
+
+    // A client whose cookie container holds the login cookie of the given user.
+    public async Task<HttpClient> CreateLoggedInClientAsync(string userName, string password)
+    {
+        var client = CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/login", new { userName, password });
+        Assert.True(response.IsSuccessStatusCode, $"Login as {userName} failed with {(int)response.StatusCode}.");
+
+        return client;
+    }
+
+    public Task<HttpClient> CreateOwnerClientAsync()
+        => CreateLoggedInClientAsync(TestOwnerUserName, TestOwnerPassword);
 
     async Task IAsyncLifetime.DisposeAsync()
     {

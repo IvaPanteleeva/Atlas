@@ -29,6 +29,9 @@ public static class ResultExtensions
             ErrorType.Conflict => TypedResults.Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 title: error.Message),
+            ErrorType.Unauthorized => TypedResults.Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: error.Message),
             _ => throw new ArgumentOutOfRangeException(nameof(error), error.Type, "Unknown error type."),
         };
 }

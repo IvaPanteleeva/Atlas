@@ -20,5 +20,16 @@ public static class IdentityOptionsSetup
 
         // Login is by user name; e-mail is optional.
         options.User.RequireUniqueEmail = false;
+        options.User.AllowedUserNameCharacters = AllowedUserNameCharacters;
     }
+
+    // Latin and Cyrillic letters (А-Я, а-я), digits and - . _ @. No spaces.
+    private static readonly string AllowedUserNameCharacters =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        + CharRange('А', 'Я')
+        + CharRange('а', 'я')
+        + "0123456789-._@";
+
+    private static string CharRange(char first, char last)
+        => new([.. Enumerable.Range(first, last - first + 1).Select(c => (char)c)]);
 }

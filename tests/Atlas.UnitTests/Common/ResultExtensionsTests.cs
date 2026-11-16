@@ -62,6 +62,18 @@ public class ResultExtensionsTests
     }
 
     [Fact]
+    public void Unauthorized_Is401ProblemDetails()
+    {
+        Result<int> result = Error.Unauthorized("Грешно име или парола");
+
+        var http = result.ToHttpResult();
+
+        var problem = Assert.IsType<ProblemHttpResult>(http);
+        Assert.Equal(StatusCodes.Status401Unauthorized, problem.StatusCode);
+        Assert.Equal("Грешно име или парола", problem.ProblemDetails.Title);
+    }
+
+    [Fact]
     public void Validation_Is400WithErrorsPerField()
     {
         Result result = Error.Validation(new Dictionary<string, string[]>

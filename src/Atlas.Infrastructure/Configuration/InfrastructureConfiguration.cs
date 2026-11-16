@@ -2,6 +2,7 @@ namespace Atlas.Infrastructure.Configuration;
 
 using Atlas.Application.Contracts;
 using Atlas.Infrastructure.Entities;
+using Atlas.Infrastructure.Identity;
 using Atlas.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -41,16 +42,19 @@ public static class InfrastructureConfiguration
                 .WithScopedLifetime());
     }
 
-    // Users and roles only. AddSignInManager comes in step 2.2 together with the cookie:
-    // SignInManager needs the authentication services, without them DI validation fails at startup.
+    // Users, roles and sign-in. The cookie scheme itself is set up in Atlas.Api (AddAtlasAuth):
+    // SignInManager needs those authentication services at runtime.
     private static IServiceCollection AddIdentity(this IServiceCollection services)
     {
         services
             .AddIdentityCore<AtlasUser>(IdentityOptionsSetup.Apply)
             .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<AtlasDbContext>();
+            .AddEntityFrameworkStores<AtlasDbContext>()
+            .AddSignInManager()
+            .AddClaimsPrincipalFactory<AtlasClaimsPrincipalFactory>();
 
         services.AddScoped<IdentitySeeder>();
+        services.AddScoped<IAuthService, AuthService>();
 
         return services;
     }

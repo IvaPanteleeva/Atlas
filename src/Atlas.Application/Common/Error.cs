@@ -6,6 +6,7 @@ public enum ErrorType
     Validation,
     NotFound,
     Conflict,
+    Unauthorized,
 }
 
 /// <summary>A failure carried by <see cref="Result"/>.</summary>
@@ -24,6 +25,10 @@ public sealed record Error(
 
     public static Error Conflict(string message)
         => new(ErrorType.Conflict, message);
+
+    // Failed sign-in (wrong credentials or locked out).
+    public static Error Unauthorized(string message)
+        => new(ErrorType.Unauthorized, message);
 
     public static Error Validation(IReadOnlyDictionary<string, string[]> fieldErrors)
         => new(ErrorType.Validation, ValidationMessage, fieldErrors);

@@ -10,7 +10,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services
     .AddApplication(builder.Configuration)
-    .AddInfrastructure(builder.Configuration);
+    .AddInfrastructure(builder.Configuration)
+    .AddAtlasAuth();
 
 var app = builder.Build();
 
@@ -24,29 +25,41 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler();
 }
 
-// Empty 4xx/5xx responses get a ProblemDetails body.
+// Empty 4xx/5xx responses get a ProblemDetails body (also the 401/403 from the cookie and the policies).
 app.UseStatusCodePages();
 
+// Open in Development: they only describe the API, every call still needs a login.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapOpenApi().AllowAnonymous();
+    app.MapScalarApiReference().AllowAnonymous();
 }
 
 app.UseHttpsRedirection();
 
 // Angular build output lives in wwwroot (see CLAUDE.md "Деплой").
+// Before authentication: the Angular files are public, the login screen is one of them.
 app.UseStaticFiles();
 
+// Every endpoint below needs a login unless it says AllowAnonymous (fallback policy in AddAtlasAuth).
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapHealthEndpoints();
+app.MapAuthEndpoints();
+app.MapUserEndpoints();
 
 // Unknown /api/... routes are 404 ProblemDetails, not index.html.
 // The literal "api" segment makes this more specific than the Angular fallback below.
-app.MapGroup("/api").MapFallback(() => TypedResults.Problem(
-    statusCode: StatusCodes.Status404NotFound,
-    title: "Няма такъв адрес в API-то"));
+// Anonymous, so a wrong address is a 404 and not a 401.
+app.MapGroup("/api")
+    .MapFallback(() => TypedResults.Problem(
+        statusCode: StatusCodes.Status404NotFound,
+        title: "Няма такъв адрес в API-то"))
+    .AllowAnonymous();
 
 // Client-side routes (e.g. /sites/5) get index.html so Angular routing can handle them.
-app.MapFallbackToFile("index.html");
+// Anonymous: Angular itself shows the login screen and asks /api/auth/me.
+app.MapFallbackToFile("index.html").AllowAnonymous();
 
 await app.RunAsync();
