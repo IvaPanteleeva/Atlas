@@ -1,4 +1,4 @@
-/** A payment from the client to Атлас for one site (GET /api/sites/{siteId}/payments, newest first). Owner only. */
+/** A payment from the client to Атлас for one site (GET /api/sites/{siteId}/payments, newest first). Owner and Manager. */
 export interface Payment {
     id: string;
     siteId: string;

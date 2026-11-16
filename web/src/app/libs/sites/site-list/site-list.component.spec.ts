@@ -93,7 +93,7 @@ describe('SiteListComponent', () => {
             await render(sites);
         }
 
-        it('shows no money without summaries (Crew)', async () => {
+        it('shows no money without summaries', async () => {
             await render(sites);
 
             expect(rows().map(money)).toEqual([null, null, null]);

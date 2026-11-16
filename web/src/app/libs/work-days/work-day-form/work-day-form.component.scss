@@ -27,6 +27,63 @@ nz-input-wrapper {
     margin-bottom: 14px;
 }
 
+// „Кой работи“: prototype .workers pills with a hidden checkbox (checked = accent).
+.workers-field {
+    min-width: 0;
+    margin: 0 0 14px;
+    padding: 0;
+    border: 0;
+}
+
+.workers-label {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.workers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.worker {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 99px;
+    background: var(--surface);
+    cursor: pointer;
+    user-select: none;
+
+    input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    &.on {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 600;
+    }
+
+    &:has(input:focus-visible) {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+    }
+}
+
+.workers-empty {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
 // Prototype item card: sunk panel inside the sheet.
 .items {
     margin-bottom: 14px;

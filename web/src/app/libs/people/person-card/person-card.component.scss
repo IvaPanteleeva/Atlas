@@ -1,0 +1,39 @@
+// Prototype crew card: surface, 1px line, radius 8px, padding 14px.
+:host {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.name {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 18px;
+    font-weight: 500;
+    overflow-wrap: break-word;
+}
+
+.days {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.note {
+    margin: 0;
+    font-size: 13.5px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+.edit {
+    align-self: flex-start;
+    min-height: 36px;
+    margin: -4px 0 -6px -7px;
+    color: var(--muted);
+}

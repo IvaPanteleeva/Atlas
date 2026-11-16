@@ -32,6 +32,7 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectComponent, NzSelectModule } from 'ng-zorro-antd/select';
+import { Person } from '../../people/person.model';
 import { MONEY_MAX, MONEY_MIN, Service } from '../../services/service.model';
 import { FieldErrors } from '../../shared/api-errors';
 import { DATE_PICKER_PROVIDERS } from '../../shared/date-adapter';
@@ -41,14 +42,14 @@ import { DecimalInputDirective } from '../../shared/decimal-input';
 import { resolveRate } from '../../shared/price-resolver';
 import { Unit, UNIT_LABELS, UNIT_OPTIONS } from '../../shared/units';
 import { SitePrice } from '../../site-prices/site-price.model';
-import { SaveWorkDayRequest, WORK_DAY_LIMITS, WorkDay, WorkItem } from '../work-day.model';
+import { SaveWorkDayRequest, WORK_DAY_LIMITS, WorkDay, WorkDayWorker, WorkItem } from '../work-day.model';
 
 /** Select value of „Свободен текст“ (nz-select shows null as an empty field, so an empty string is used). */
 const FREE_TEXT = '';
 const DEFAULT_UNIT: Unit = 'SquareMeter';
 
 /** Server error keys that have a place in the form; the rest go to the alert. */
-const DAY_FIELDS = ['date', 'title', 'note', 'items'];
+const DAY_FIELDS = ['date', 'title', 'note', 'items', 'workerIds'];
 const ITEM_FIELD_KEY = /^items\[\d+\]\.(serviceId|description|quantity|unit|rate|needsReview)$/;
 
 type ItemForm = FormGroup<{
@@ -104,9 +105,28 @@ function previewTotal(items: { quantity: number | null; rate: number | null }[])
 }
 
 /**
- * Dumb form for a work day (create when day is null, edit otherwise): date, title, item cards, note.
+ * Who can be picked: the crew, plus the people already on the day (even if no longer crew or not in the list),
+ * sorted by name.
+ */
+function workerOptions(people: Person[], dayWorkers: WorkDayWorker[]): WorkDayWorker[] {
+    const options = new Map<string, string>();
+    for (const person of people) {
+        if (person.isCrew) {
+            options.set(person.id, person.name);
+        }
+    }
+    for (const worker of dayWorkers) {
+        if (!options.has(worker.id)) {
+            options.set(worker.id, people.find((person) => person.id === worker.id)?.name ?? worker.name);
+        }
+    }
+    return [...options].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'bg'));
+}
+
+/**
+ * Dumb form for a work day (create when day is null, edit otherwise): date, title, who worked, item cards, note.
  * Choosing a service fills description, unit and price (site price → default → „цена?“).
- * Crew (canEditPrices false) sees the price read-only and sends null: the server resolves it.
+ * Without canEditPrices the price is read-only and sent as null: the server resolves it (today Owner and Manager both edit prices).
  */
 @Component({
     selector: 'atlas-work-day-form',
@@ -132,7 +152,9 @@ export class WorkDayFormComponent {
     readonly day = input<WorkDay | null>(null);
     readonly services = input<Service[]>([]);
     readonly sitePrices = input<SitePrice[]>([]);
-    /** Owner: may type or change prices. Crew: prices are read-only and sent as null. */
+    /** Everyone from GET /api/people; the crew is offered under „Кой работи“. */
+    readonly people = input<Person[]>([]);
+    /** true: may type or change prices; false: prices are read-only and sent as null. */
     readonly canEditPrices = input(false);
     readonly canDelete = input(false);
     readonly saving = input(false);
@@ -162,7 +184,10 @@ export class WorkDayFormComponent {
     });
 
     protected readonly confirmingDelete = signal(false);
-    /** Raw item values (disabled Crew prices included), kept in a signal for the live total. */
+    /** Ids of the people chosen under „Кой работи“. */
+    protected readonly workerIds = signal<string[]>([]);
+    protected readonly workerOptions = computed(() => workerOptions(this.people(), this.day()?.workers ?? []));
+    /** Raw item values (disabled read-only prices included), kept in a signal for the live total. */
     private readonly itemValues = signal<{ quantity: number | null; rate: number | null }[]>([]);
     protected readonly summary = computed(() => previewTotal(this.itemValues()));
 
@@ -209,6 +234,14 @@ export class WorkDayFormComponent {
         return this.fieldErrors()[key] ?? null;
     }
 
+    protected isWorker(id: string): boolean {
+        return this.workerIds().includes(id);
+    }
+
+    protected toggleWorker(id: string): void {
+        this.workerIds.update((ids) => (ids.includes(id) ? ids.filter((other) => other !== id) : [...ids, id]));
+    }
+
     protected addItem(): void {
         if (this.items.length >= WORK_DAY_LIMITS.maxItems) {
             return;
@@ -245,6 +278,10 @@ export class WorkDayFormComponent {
             date: toIsoDate(value.date!),
             title: orNull(value.title),
             note: orNull(value.note),
+            // In the order shown (by name).
+            workerIds: this.workerOptions()
+                .map((option) => option.id)
+                .filter((id) => this.isWorker(id)),
             items: value.items.map((item) => ({
                 id: item.id,
                 serviceId: item.serviceId || null,
@@ -290,7 +327,7 @@ export class WorkDayFormComponent {
                 group.controls.description.setValue(service.name);
                 group.controls.unit.setValue(service.unit);
             }
-            // For Crew the server keeps the stored price of an existing item, so the form shows that one.
+            // Without canEditPrices the server keeps the stored price of an existing item, so the form shows that one.
             if (!this.canEditPrices() && group.controls.id.value) {
                 return;
             }
@@ -317,6 +354,7 @@ export class WorkDayFormComponent {
             { emitEvent: false },
         );
         this.syncItemValues();
+        this.workerIds.set(day?.workers.map((worker) => worker.id) ?? []);
         this.confirmingDelete.set(false);
     }
 }

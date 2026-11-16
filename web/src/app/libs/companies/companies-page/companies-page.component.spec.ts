@@ -6,15 +6,17 @@ import { provideNzIcons } from 'ng-zorro-antd/icon';
 import { Observable, of, throwError } from 'rxjs';
 import { routes } from '../../../app.routes';
 import { AuthStore } from '../../auth/+state/auth.store';
-import { Me } from '../../auth/auth.model';
+import { Me, Role } from '../../auth/auth.model';
 import { AuthService } from '../../auth/auth.service';
 import { APP_ICONS } from '../../shared/icons';
 import { CompaniesService } from '../companies.service';
 import { Company, SaveCompanyRequest } from '../company.model';
 
 class FakeAuthService {
+    role: Role = 'Owner';
+
     me(): Observable<Me> {
-        return of({ id: '1', userName: 'iva', role: 'Owner', companyId: null });
+        return of({ id: '1', userName: 'iva', role: this.role, companyId: null });
     }
 }
 
@@ -51,14 +53,16 @@ class FakeCompaniesService {
 
 describe('CompaniesPageComponent', () => {
     let fake: FakeCompaniesService;
+    let auth: FakeAuthService;
 
     beforeEach(async () => {
         fake = new FakeCompaniesService();
+        auth = new FakeAuthService();
         TestBed.configureTestingModule({
             providers: [
                 provideRouter(routes, withComponentInputBinding()),
                 provideNzIcons(APP_ICONS),
-                { provide: AuthService, useValue: new FakeAuthService() },
+                { provide: AuthService, useValue: auth },
                 { provide: CompaniesService, useValue: fake },
             ],
         });
@@ -94,6 +98,18 @@ describe('CompaniesPageComponent', () => {
         expect(fake.calls).toEqual(['list']);
         expect(names(page)).toEqual(['Алфа', 'Вега']);
         expect(document.title).toBe('Фирми · Атлас');
+    });
+
+    it('Manager opens the page, adds and renames, but has no delete buttons', async () => {
+        auth.role = 'Manager';
+        await TestBed.inject(AuthStore).loadMe();
+
+        const { page } = await render();
+
+        expect(names(page)).toEqual(['Алфа', 'Вега']);
+        expect(button(page, 'Преименувай')).toBeDefined();
+        expect(button(page, 'Изтрий')).toBeUndefined();
+        expect(page.querySelector('atlas-company-add')).not.toBeNull();
     });
 
     it('shows "Няма фирми." for an empty list', async () => {

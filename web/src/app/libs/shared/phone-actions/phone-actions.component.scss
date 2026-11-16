@@ -1,0 +1,38 @@
+:host {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+}
+
+// Prototype: the phone in mono, ghost small buttons beside it.
+.phone {
+    font-family: var(--f-num);
+    font-size: 14px;
+    user-select: all;
+}
+
+.actions {
+    display: inline-flex;
+    gap: 6px;
+
+    // "Обади се" is an <a>, "Копирай" a <button>: inline-flex + fixed height centres the text the same way in both.
+    .ant-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 32px;
+        padding-block: 0;
+        background: transparent;
+    }
+}
+
+.copy-status {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: 12px;
+
+    &:empty {
+        display: none;
+    }
+}

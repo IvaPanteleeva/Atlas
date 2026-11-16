@@ -15,6 +15,12 @@ export interface WorkItem {
     amount: number | null;
 }
 
+/** Who worked on a day (ordered by name by the server). */
+export interface WorkDayWorker {
+    id: string;
+    name: string;
+}
+
 /** GET /api/sites/{siteId}/workdays (newest first) and the response of POST/PUT. */
 export interface WorkDay {
     id: string;
@@ -24,20 +30,21 @@ export interface WorkDay {
     title: string | null;
     note: string | null;
     items: WorkItem[];
+    workers: WorkDayWorker[];
     /** Sum of the items with a price, computed by the server. */
     total: number;
     /** Items still to be clarified, counted by the server. */
     openCount: number;
 }
 
-/** One item of the save body. Existing items send their id, so prices kept for Crew stay. */
+/** One item of the save body. Existing items send their id, so their stored prices can stay. */
 export interface SaveWorkItemRequest {
     id: string | null;
     serviceId: string | null;
     description: string;
     quantity: number;
     unit: Unit;
-    /** Ignored by the server for Crew (it resolves the price itself); the form sends null then. */
+    /** null without canEditPrices: the server then resolves the price itself. */
     rate: number | null;
     needsReview: boolean;
 }
@@ -49,6 +56,8 @@ export interface SaveWorkDayRequest {
     title: string | null;
     note: string | null;
     items: SaveWorkItemRequest[];
+    /** People who worked that day. New ones must be crew; ones already on the day stay valid. */
+    workerIds: string[];
 }
 
 /** Same limits as the API. */

@@ -79,7 +79,7 @@
     }
 
     <div class="footer">
-        @if (service()) {
+        @if (service() && canDelete()) {
             <button
                 nz-button
                 nzDanger

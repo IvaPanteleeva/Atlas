@@ -94,6 +94,25 @@ describe('WorkDayListComponent', () => {
         expect(days()[1].querySelector('.total')).toBeNull();
     });
 
+    it('shows who worked as chips next to the title (also without a title)', async () => {
+        await render([
+            testWorkDay({
+                id: 'd1',
+                workers: [
+                    { id: 'p1', name: 'Гошо' },
+                    { id: 'p3', name: 'Пешо' },
+                ],
+            }),
+            testWorkDay({ id: 'd2', title: null, workers: [{ id: 'p1', name: 'Гошо' }] }),
+            testWorkDay({ id: 'd3', workers: [] }),
+        ]);
+
+        expect(Array.from(days()[0].querySelectorAll('.chip')).map((chip) => text(chip))).toEqual(['Гошо', 'Пешо']);
+        expect(text(days()[0].querySelector('.head .title'))).toBe('Шпакловка финал');
+        expect(Array.from(days()[1].querySelectorAll('.chip')).map((chip) => text(chip))).toEqual(['Гошо']);
+        expect(days()[2].querySelector('.chips')).toBeNull();
+    });
+
     it('shows the note', async () => {
         await render([testWorkDay({ note: 'Ключ при съседа\nвтори ред' })]);
 

@@ -165,22 +165,16 @@ describe('ServicesPageComponent', () => {
         expect(names(page)).toEqual(['Шпакловка']);
     });
 
-    it('Crew sees the list read-only: no button, rows are not clickable', async () => {
-        role = 'Crew';
+    it('Manager adds and edits services but cannot delete one', async () => {
+        role = 'Manager';
+        const { harness, page } = await render();
 
-        const { page } = await render();
+        expect(button(page, 'Нова услуга')).toBeDefined();
+        page.querySelectorAll<HTMLButtonElement>('button.service')[0].click();
+        await harness.fixture.whenStable();
+        const form = await waitForForm();
 
-        expect(button(page, 'Нова услуга')).toBeUndefined();
-        expect(names(page)).toEqual(['Боядисване', 'Шпакловка']);
-        expect(page.querySelectorAll('button.service').length).toBe(0);
-    });
-
-    it('Crew sees the empty state without the hint', async () => {
-        role = 'Crew';
-        fake.listResult = of([]);
-
-        const { page } = await render();
-
-        expect(page.querySelector('.empty')?.textContent?.trim()).toBe('Още няма услуги.');
+        expect(button(form, 'Запази')).toBeDefined();
+        expect(button(form, 'Изтрий')).toBeUndefined();
     });
 });

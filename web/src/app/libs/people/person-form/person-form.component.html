@@ -1,0 +1,96 @@
+<form nz-form nzLayout="vertical" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <ng-template #nameTip let-control>
+        @if (control.hasError('required')) {
+            Въведи име
+        } @else if (control.hasError('maxlength')) {
+            Най-много {{ control.getError('maxlength').requiredLength }} знака
+        }
+    </ng-template>
+    <ng-template #lengthTip let-control>
+        @if (control.hasError('maxlength')) {
+            Най-много {{ control.getError('maxlength').requiredLength }} знака
+        }
+    </ng-template>
+
+    <nz-form-item>
+        <nz-form-label nzFor="person-name" nzRequired>Име</nz-form-label>
+        <nz-form-control [nzErrorTip]="nameTip">
+            <input
+                nz-input
+                id="person-name"
+                formControlName="name"
+                placeholder="напр. Пешо"
+                autocomplete="off"
+                [maxLength]="limits.name"
+            />
+            @if (serverError('name'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="person-phone">Телефон</nz-form-label>
+        <nz-form-control [nzErrorTip]="lengthTip">
+            <input
+                nz-input
+                id="person-phone"
+                type="tel"
+                inputmode="tel"
+                formControlName="phone"
+                autocomplete="off"
+                [maxLength]="limits.phone"
+            />
+            @if (serverError('phone'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="person-note">Бележка</nz-form-label>
+        <nz-form-control [nzErrorTip]="lengthTip" nzExtra="Само за нас">
+            <textarea nz-input id="person-note" formControlName="note" rows="3" [maxLength]="limits.note"></textarea>
+            @if (serverError('note'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <label nz-checkbox class="crew" formControlName="isCrew">Работи с нас (в екипа)</label>
+    @if (serverError('isCrew'); as message) {
+        <div class="server-error">{{ message }}</div>
+    }
+
+    @if (error() || otherErrors().length) {
+        <nz-alert class="error" nzType="error" nzShowIcon role="alert" [nzMessage]="alertText" />
+        <ng-template #alertText>
+            @if (error(); as message) {
+                <div>{{ message }}</div>
+            }
+            @for (message of otherErrors(); track $index) {
+                <div>{{ message }}</div>
+            }
+        </ng-template>
+    }
+
+    <div class="footer">
+        @if (person() && canDelete()) {
+            <button
+                nz-button
+                nzDanger
+                type="button"
+                class="footer__delete"
+                [nzType]="confirmingDelete() ? 'primary' : 'default'"
+                [disabled]="saving()"
+                (click)="requestDelete()"
+            >
+                {{ confirmingDelete() ? 'Потвърди изтриване' : 'Изтрий' }}
+            </button>
+        }
+        <div class="footer__actions">
+            <button nz-button type="button" [disabled]="saving()" (click)="cancel.emit()">Отказ</button>
+            <button nz-button nzType="primary" type="submit" [nzLoading]="saving()">Запази</button>
+        </div>
+    </div>
+</form>

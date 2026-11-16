@@ -187,8 +187,8 @@ describe('SitesPageComponent', () => {
         );
     });
 
-    it('Crew is not offered "+ Нова фирма"', async () => {
-        role = 'Crew';
+    it('Manager is offered "+ Нова фирма" too', async () => {
+        role = 'Manager';
         const { harness, page } = await render();
         const form = await openForm(harness, page);
 
@@ -200,7 +200,7 @@ describe('SitesPageComponent', () => {
             return found;
         });
 
-        expect(labels).not.toContain('+ Нова фирма');
+        expect(labels).toContain('+ Нова фирма');
     });
 
     it('Отказ closes the form without saving', async () => {
@@ -318,16 +318,14 @@ describe('SitesPageComponent', () => {
             expect(page.querySelector('.pill.good')).toBeNull();
         });
 
-        it('Crew sees the list without money and /summaries is not called', async () => {
-            role = 'Crew';
+        it('Manager sees the money too', async () => {
+            role = 'Manager';
 
             const { page } = await render();
 
-            expect(summaries.calls).toEqual([]);
-            expect(page.querySelector('atlas-ledger')).toBeNull();
-            expect(page.querySelector('.pill.q, .pill.good')).toBeNull();
+            expect(summaries.calls).toEqual(['all']);
+            expect(page.querySelector('atlas-ledger')).not.toBeNull();
             expect(page.querySelectorAll('button.site').length).toBe(2);
-            expect(page.querySelector('.money')).toBeNull();
         });
     });
 });

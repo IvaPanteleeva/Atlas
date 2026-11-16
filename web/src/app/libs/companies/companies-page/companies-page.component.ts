@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { AuthStore } from '../../auth/+state/auth.store';
 import { CompaniesStore } from '../+state/companies.store';
 import { CompanyAddComponent } from '../company-add/company-add.component';
 import { CompanyRowComponent } from '../company-row/company-row.component';
 
-/** Smart page "Фирми" (Owner only): the only component here that talks to the store. */
+/** Smart page "Фирми" (Owner and Manager; only Owner deletes): the only component here that talks to the store. */
 @Component({
     selector: 'atlas-companies-page',
     imports: [NzAlertModule, CompanyRowComponent, CompanyAddComponent],
@@ -14,6 +15,7 @@ import { CompanyRowComponent } from '../company-row/company-row.component';
 })
 export class CompaniesPageComponent {
     protected readonly store = inject(CompaniesStore);
+    protected readonly auth = inject(AuthStore);
 
     /** The row being renamed; one at a time. */
     protected readonly editingId = signal<string | null>(null);

@@ -1,0 +1,54 @@
+:host {
+    display: block;
+}
+
+nz-form-item {
+    margin-bottom: 14px;
+}
+
+input[nz-input] {
+    min-height: 40px;
+}
+
+.crew {
+    min-height: 40px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.server-error {
+    margin-top: 4px;
+    color: var(--warn);
+    font-size: 13px;
+}
+
+.error {
+    margin: 6px 0 14px;
+}
+
+// Same footer as the other sheets: delete on the left, Отказ + Запази on the right.
+.footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+
+    button {
+        min-height: 40px;
+    }
+}
+
+.footer__delete {
+    min-width: 0;
+    height: auto;
+    white-space: normal;
+    line-height: 1.2;
+}
+
+.footer__actions {
+    display: flex;
+    flex: none;
+    gap: 8px;
+    margin-left: auto;
+}

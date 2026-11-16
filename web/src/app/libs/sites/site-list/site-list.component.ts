@@ -20,7 +20,7 @@ function restOf({ earned, remaining }: SiteSummaryRow): Rest {
 
 /**
  * Dumb list of sites: each row is a full-width button that emits the site id.
- * With summaries (Owner) each row also shows what was earned and what is left; without them (Crew) no money.
+ * With summaries each row also shows what was earned and what is left; without them no money.
  */
 @Component({
     selector: 'atlas-site-list',
@@ -31,7 +31,7 @@ function restOf({ earned, remaining }: SiteSummaryRow): Rest {
 })
 export class SiteListComponent {
     readonly sites = input.required<SiteListItem[]>();
-    /** Money per site id (Owner only); null = no money on the rows. */
+    /** Money per site id (Owner and Manager); null = no money on the rows. */
     readonly summaries = input<SummariesBySite | null>(null);
     readonly open = output<string>();
 

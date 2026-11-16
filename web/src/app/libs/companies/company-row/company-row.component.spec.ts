@@ -18,6 +18,7 @@ describe('CompanyRowComponent', () => {
         component.editCancel.subscribe(() => events.push('editCancel'));
         component.renamed.subscribe((name) => events.push(`renamed ${name}`));
         component.removed.subscribe(() => events.push('removed'));
+        fixture.componentRef.setInput('canDelete', true);
         element = fixture.nativeElement as HTMLElement;
         await fixture.whenStable();
     });
@@ -43,6 +44,14 @@ describe('CompanyRowComponent', () => {
         expect(button('Преименувай')).toBeDefined();
         expect(button('Изтрий')).toBeDefined();
         expect(input()).toBeNull();
+    });
+
+    it('without canDelete there is only the rename button', async () => {
+        fixture.componentRef.setInput('canDelete', false);
+        await fixture.whenStable();
+
+        expect(button('Преименувай')).toBeDefined();
+        expect(button('Изтрий')).toBeUndefined();
     });
 
     it('the pencil asks to start editing', () => {

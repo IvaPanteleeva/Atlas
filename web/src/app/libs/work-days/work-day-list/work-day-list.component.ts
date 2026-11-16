@@ -34,7 +34,7 @@ function dateLabels(value: string): { day: string; weekday: string } {
 })
 export class WorkDayListComponent {
     readonly days = input.required<WorkDay[]>();
-    /** Shows „Редакция“ (Owner and Crew). */
+    /** Shows „Редакция“ (Owner and Manager). */
     readonly canEdit = input(true);
     readonly edit = output<WorkDay>();
 

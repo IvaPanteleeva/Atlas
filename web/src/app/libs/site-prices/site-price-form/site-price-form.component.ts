@@ -52,6 +52,8 @@ export class SitePriceFormComponent {
     readonly services = input<Service[]>([]);
     /** The prices the site already has; their services are not offered again. */
     readonly prices = input<SitePrice[]>([]);
+    /** Owner only. */
+    readonly canDelete = input(false);
     readonly saving = input(false);
     readonly error = input<string | null>(null);
     readonly fieldErrors = input<FieldErrors>({});

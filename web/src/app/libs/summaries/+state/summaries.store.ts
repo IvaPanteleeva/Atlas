@@ -29,7 +29,7 @@ const initialState: SummariesState = {
 
 const LOAD_FALLBACK_ERROR = 'Грешка при зареждане на сумите';
 
-/** Money computed by the server (Owner only): the open site's summary and the totals of all sites. */
+/** Money computed by the server (Owner and Manager): the open site's summary and the totals of all sites. */
 export const SummariesStore = signalStore(
     { providedIn: 'root' },
     withState(initialState),

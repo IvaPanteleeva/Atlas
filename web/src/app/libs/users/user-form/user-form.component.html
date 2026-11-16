@@ -1,0 +1,93 @@
+<form nz-form nzLayout="vertical" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <nz-form-item>
+        <nz-form-label nzFor="user-name" nzRequired>Потребителско име</nz-form-label>
+        <nz-form-control nzErrorTip="Въведи потребителско име">
+            <input
+                nz-input
+                id="user-name"
+                formControlName="userName"
+                autocomplete="off"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+            />
+            @if (serverError('userName'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="user-password" nzRequired>Парола</nz-form-label>
+        <nz-form-control nzErrorTip="Поне 8 знака">
+            <nz-input-password [nzVisible]="passwordVisible()" [nzVisibilityToggle]="false">
+                <input nz-input id="user-password" formControlName="password" autocomplete="new-password" />
+                <button
+                    nzInputSuffix
+                    type="button"
+                    class="eye"
+                    [attr.aria-label]="passwordVisible() ? 'Скрий паролата' : 'Покажи паролата'"
+                    [attr.aria-pressed]="passwordVisible()"
+                    (click)="togglePassword()"
+                >
+                    <nz-icon [nzType]="passwordVisible() ? 'eye' : 'eye-invisible'" nzTheme="outline" />
+                </button>
+            </nz-input-password>
+            @if (serverError('password'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="user-role-input" nzRequired>Роля</nz-form-label>
+        <nz-form-control>
+            <nz-select id="user-role" formControlName="role" nzId="user-role-input">
+                @for (role of roles; track role.value) {
+                    <nz-option [nzValue]="role.value" [nzLabel]="role.label" />
+                }
+            </nz-select>
+            @if (serverError('role'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    @if (needsCompany()) {
+        <nz-form-item>
+            <nz-form-label nzFor="user-company-input" nzRequired>Фирма</nz-form-label>
+            <nz-form-control nzErrorTip="Избери фирма" nzExtra="Възложителят вижда само обектите на тази фирма.">
+                <nz-select
+                    id="user-company"
+                    formControlName="companyId"
+                    nzId="user-company-input"
+                    nzPlaceHolder="Избери фирма"
+                >
+                    @for (company of companies(); track company.id) {
+                        <nz-option [nzValue]="company.id" [nzLabel]="company.name" />
+                    }
+                </nz-select>
+                @if (serverError('companyId'); as message) {
+                    <div class="server-error">{{ message }}</div>
+                }
+            </nz-form-control>
+        </nz-form-item>
+    }
+
+    @if (error() || otherErrors().length) {
+        <nz-alert class="error" nzType="error" nzShowIcon role="alert" [nzMessage]="alertText" />
+        <ng-template #alertText>
+            @if (error(); as message) {
+                <div>{{ message }}</div>
+            }
+            @for (message of otherErrors(); track $index) {
+                <div>{{ message }}</div>
+            }
+        </ng-template>
+    }
+
+    <div class="footer">
+        <button nz-button type="button" [disabled]="saving()" (click)="cancel.emit()">Отказ</button>
+        <button nz-button nzType="primary" type="submit" [nzLoading]="saving()">Запази</button>
+    </div>
+</form>

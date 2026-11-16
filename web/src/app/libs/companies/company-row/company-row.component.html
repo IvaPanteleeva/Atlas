@@ -43,22 +43,24 @@
     >
         <nz-icon nzType="edit" nzTheme="outline" aria-hidden="true" />
     </button>
-    <button
-        nz-button
-        nzType="text"
-        nzDanger
-        type="button"
-        class="icon-button"
-        aria-label="Изтрий"
-        [disabled]="saving()"
-        nz-popconfirm
-        nzPopconfirmTitle="Изтриване на фирмата?"
-        nzOkText="Изтрий"
-        nzCancelText="Отказ"
-        nzOkDanger
-        nzPopconfirmPlacement="topRight"
-        (nzOnConfirm)="removed.emit()"
-    >
-        <nz-icon nzType="delete" nzTheme="outline" aria-hidden="true" />
-    </button>
+    @if (canDelete()) {
+        <button
+            nz-button
+            nzType="text"
+            nzDanger
+            type="button"
+            class="icon-button"
+            aria-label="Изтрий"
+            [disabled]="saving()"
+            nz-popconfirm
+            nzPopconfirmTitle="Изтриване на фирмата?"
+            nzOkText="Изтрий"
+            nzCancelText="Отказ"
+            nzOkDanger
+            nzPopconfirmPlacement="topRight"
+            (nzOnConfirm)="removed.emit()"
+        >
+            <nz-icon nzType="delete" nzTheme="outline" aria-hidden="true" />
+        </button>
+    }
 }

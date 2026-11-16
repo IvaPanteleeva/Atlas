@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { SiteSummary, SitesSummaries } from './summary.model';
 
-/** Money summaries computed by the server. Owner only (the API answers 403 to Crew). */
+/** Money summaries computed by the server. Owner and Manager. */
 @Injectable({ providedIn: 'root' })
 export class SummariesService {
     private readonly http = inject(HttpClient);

@@ -136,8 +136,15 @@ describe('ServiceFormComponent', () => {
         expect(saved).toEqual([{ name: 'Шпакловка', unit: 'LinearMeter', defaultRate: 6.5 }]);
     });
 
+    it('delete is only shown with canDelete (Owner)', async () => {
+        await set('service', service);
+
+        expect(button('Изтрий')).toBeUndefined();
+    });
+
     it('delete is shown when editing and needs a second click', async () => {
         await set('service', service);
+        await set('canDelete', true);
 
         button('Изтрий')!.click();
         await fixture.whenStable();

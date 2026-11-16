@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { SaveServiceRequest, Service } from './service.model';
 
-/** Service endpoints. Owner and Crew read; only Owner writes (the API checks it). */
+/** Service endpoints. Owner and Manager read and write; only Owner deletes (the API checks it). */
 @Injectable({ providedIn: 'root' })
 export class ServicesService {
     private readonly http = inject(HttpClient);

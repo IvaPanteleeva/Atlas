@@ -10,7 +10,7 @@
     </div>
 } @else if (store.selected(); as site) {
     <atlas-site-header [site]="site" />
-    @if (auth.isOwner() && summaries.siteId() === site.id) {
+    @if (auth.isStaff() && summaries.siteId() === site.id) {
         @if (summaries.site(); as money) {
             <atlas-ledger class="ledger" [earned]="money.earned" [paid]="money.paid" [remaining]="money.remaining" />
             @if (money.openCount > 0) {
@@ -23,6 +23,26 @@
         }
     }
     <button nz-button nzSize="small" type="button" class="edit" (click)="openForm()">Данни за обекта</button>
+
+    <section class="site-contacts" aria-labelledby="site-contacts-title">
+        <div class="sec-head">
+            <h2 id="site-contacts-title">
+                Контакти на обекта <span class="count num">{{ contacts.contacts().length }}</span>
+            </h2>
+            <button nz-button nzSize="small" type="button" (click)="openContactForm(null)">
+                <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
+                Контакт
+            </button>
+        </div>
+        @if (!contactFormOpen() && contacts.error(); as message) {
+            <nz-alert class="section-error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+        }
+        @if (contacts.loading() && !contacts.contacts().length) {
+            <p class="note">Зареждане…</p>
+        } @else {
+            <atlas-site-contact-list [contacts]="contacts.contacts()" (edit)="openContactForm($event)" />
+        }
+    </section>
 
     <section class="work-days" aria-labelledby="work-days-title">
         <div class="sec-head">
@@ -44,7 +64,7 @@
         }
     </section>
 
-    @if (auth.isOwner()) {
+    @if (auth.isStaff()) {
         <section class="payments" aria-labelledby="payments-title">
             <div class="sec-head">
                 <h2 id="payments-title">
@@ -69,7 +89,7 @@
     <section class="prices" aria-labelledby="prices-title">
         <div class="sec-head">
             <h2 id="prices-title">Цени за обекта</h2>
-            @if (auth.isOwner()) {
+            @if (auth.isStaff()) {
                 <button nz-button nzSize="small" type="button" (click)="openPriceForm(null)">
                     <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
                     Цена
@@ -84,11 +104,35 @@
         } @else {
             <atlas-site-price-list
                 [prices]="prices.prices()"
-                [canEdit]="auth.isOwner()"
+                [canEdit]="auth.isStaff()"
                 (open)="openPriceForm($event)"
             />
         }
     </section>
+
+    <nz-modal
+        [nzVisible]="contactFormOpen()"
+        [nzTitle]="editingContact() ? 'Контакт на обекта' : 'Нов контакт на обекта'"
+        [nzFooter]="null"
+        nzWrapClassName="atlas-sheet"
+        nzCentered
+        [nzWidth]="520"
+        [nzMaskClosable]="false"
+        (nzOnCancel)="closeContactForm()"
+    >
+        <ng-container *nzModalContent>
+            <atlas-site-contact-form
+                [contact]="editingContact()"
+                [canDelete]="auth.isOwner()"
+                [saving]="contacts.saving()"
+                [error]="contacts.error()"
+                [fieldErrors]="contacts.fieldErrors()"
+                (save)="saveContact($event)"
+                (delete)="removeContact()"
+                (cancel)="closeContactForm()"
+            />
+        </ng-container>
+    </nz-modal>
 
     <nz-modal
         [nzVisible]="priceFormOpen()"
@@ -103,6 +147,7 @@
         <ng-container *nzModalContent>
             <atlas-site-price-form
                 [price]="editingPrice()"
+                [canDelete]="auth.isOwner()"
                 [services]="services.services()"
                 [prices]="prices.prices()"
                 [saving]="prices.saving()"
@@ -132,7 +177,8 @@
                     [day]="editingDay()"
                     [services]="services.services()"
                     [sitePrices]="prices.prices()"
-                    [canEditPrices]="auth.isOwner()"
+                    [people]="people.people()"
+                    [canEditPrices]="auth.isStaff()"
                     [canDelete]="auth.isOwner()"
                     [saving]="workDays.saving()"
                     [error]="workDays.error()"
@@ -158,7 +204,7 @@
         </ng-container>
     </nz-modal>
 
-    <!-- The payment form is loaded lazily when the modal opens (Owner only). -->
+    <!-- The payment form is loaded lazily when the modal opens. -->
     <nz-modal
         [nzVisible]="paymentFormOpen()"
         [nzTitle]="editingPayment() ? 'Плащане' : 'Ново плащане'"
@@ -173,6 +219,7 @@
             @defer (on immediate) {
                 <atlas-payment-form
                     [payment]="editingPayment()"
+                    [canDelete]="auth.isOwner()"
                     [saving]="payments.saving()"
                     [error]="payments.error()"
                     [fieldErrors]="payments.fieldErrors()"
@@ -210,7 +257,7 @@
             <atlas-site-form
                 [site]="site"
                 [companies]="companies.companies()"
-                [canCreateCompany]="auth.isOwner()"
+                [canCreateCompany]="auth.isStaff()"
                 [canDelete]="auth.isOwner()"
                 [saving]="store.saving()"
                 [error]="store.error()"

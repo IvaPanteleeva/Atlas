@@ -1,0 +1,148 @@
+<div class="sec-head">
+    <h1>Нашите хора</h1>
+    @if (auth.isStaff()) {
+        <button nz-button nzType="primary" type="button" (click)="openPersonForm(null, true)">
+            <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
+            Човек в екипа
+        </button>
+    }
+</div>
+
+@if (!personFormOpen() && store.error(); as message) {
+    <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+}
+
+@if (store.loading() && !store.people().length) {
+    <p class="note">Зареждане…</p>
+} @else {
+    @if (store.crew().length) {
+        <div class="crew">
+            @for (person of store.crew(); track person.id) {
+                <atlas-person-card
+                    [person]="person"
+                    [showNote]="auth.isStaff()"
+                    [canEdit]="auth.isStaff()"
+                    (edit)="openPersonForm($event)"
+                />
+            }
+        </div>
+    } @else {
+        <p class="crew-empty">Няма хора в екипа.</p>
+    }
+
+    <section class="contacts" aria-labelledby="contacts-title">
+        <div class="sec-head">
+            <h2 id="contacts-title">Контакти</h2>
+            @if (auth.isStaff()) {
+                <button nz-button nzSize="small" type="button" (click)="openPersonForm(null, false)">
+                    <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
+                    Контакт
+                </button>
+            }
+        </div>
+        <atlas-contact-list
+            [people]="store.contacts()"
+            [showNotes]="auth.isStaff()"
+            [canEdit]="auth.isStaff()"
+            (edit)="openPersonForm($event)"
+        />
+    </section>
+}
+
+<nz-modal
+    [nzVisible]="personFormOpen()"
+    [nzTitle]="editingPerson() ? 'Човек' : newIsCrew() ? 'Нов човек в екипа' : 'Нов контакт'"
+    [nzFooter]="null"
+    nzWrapClassName="atlas-sheet"
+    nzCentered
+    [nzWidth]="520"
+    [nzMaskClosable]="false"
+    (nzOnCancel)="closePersonForm()"
+>
+    <ng-container *nzModalContent>
+        <atlas-person-form
+            [person]="editingPerson()"
+            [crewDefault]="newIsCrew()"
+            [canDelete]="auth.isOwner()"
+            [saving]="store.saving()"
+            [error]="store.error()"
+            [fieldErrors]="store.fieldErrors()"
+            (save)="savePerson($event)"
+            (delete)="removePerson()"
+            (cancel)="closePersonForm()"
+        />
+    </ng-container>
+</nz-modal>
+
+@if (auth.isOwner()) {
+    <section class="profiles" aria-labelledby="profiles-title">
+        <div class="sec-head">
+            <h2 id="profiles-title">Профили за вход</h2>
+            <button nz-button nzSize="small" type="button" (click)="openUserForm()">
+                <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
+                Профил
+            </button>
+        </div>
+        @if (!userFormOpen() && !passwordUser() && users.error(); as message) {
+            <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+        }
+        @if (notice(); as message) {
+            <p class="notice" role="status">{{ message }}</p>
+        }
+        @if (users.loading() && !users.users().length) {
+            <p class="note">Зареждане…</p>
+        } @else {
+            <atlas-user-list
+                [users]="users.users()"
+                [currentUserId]="auth.user()?.id ?? null"
+                [saving]="users.saving()"
+                (newPassword)="openPasswordForm($event)"
+                (remove)="removeUser($event)"
+            />
+        }
+    </section>
+
+    <nz-modal
+        [nzVisible]="userFormOpen()"
+        nzTitle="Нов профил"
+        [nzFooter]="null"
+        nzWrapClassName="atlas-sheet"
+        nzCentered
+        [nzWidth]="480"
+        [nzMaskClosable]="false"
+        (nzOnCancel)="closeUserForm()"
+    >
+        <ng-container *nzModalContent>
+            <atlas-user-form
+                [companies]="companies.companies()"
+                [saving]="users.saving()"
+                [error]="users.error()"
+                [fieldErrors]="users.fieldErrors()"
+                (save)="createUser($event)"
+                (cancel)="closeUserForm()"
+            />
+        </ng-container>
+    </nz-modal>
+
+    <nz-modal
+        [nzVisible]="!!passwordUser()"
+        [nzTitle]="'Нова парола за ' + (passwordUser()?.userName ?? '')"
+        [nzFooter]="null"
+        nzWrapClassName="atlas-sheet"
+        nzCentered
+        [nzWidth]="420"
+        [nzMaskClosable]="false"
+        (nzOnCancel)="closePasswordForm()"
+    >
+        <ng-container *nzModalContent>
+            <atlas-password-form
+                [userId]="passwordUser()?.id ?? null"
+                [saving]="users.saving()"
+                [error]="users.error()"
+                [fieldErrors]="users.fieldErrors()"
+                (save)="setPassword($event)"
+                (cancel)="closePasswordForm()"
+            />
+        </ng-container>
+    </nz-modal>
+}

@@ -1,0 +1,13 @@
+<h3 class="name">{{ person().name }}</h3>
+@if (person().phone; as phone) {
+    <atlas-phone-actions class="phone-row" [phone]="phone" />
+}
+<p class="days">{{ days() }}</p>
+@if (showNote() && person().note; as note) {
+    <p class="note">{{ note }}</p>
+}
+@if (canEdit()) {
+    <button nz-button nzType="text" nzSize="small" type="button" class="edit" (click)="edit.emit(person())">
+        Редакция
+    </button>
+}

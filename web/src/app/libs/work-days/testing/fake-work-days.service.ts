@@ -24,6 +24,7 @@ export function testWorkDay(overrides: Partial<WorkDay> = {}): WorkDay {
         title: 'Шпакловка финал',
         note: null,
         items: [testWorkItem()],
+        workers: [],
         total: 81.25,
         openCount: 0,
         ...overrides,
@@ -41,6 +42,7 @@ function echo(siteId: string, id: string, request: SaveWorkDayRequest): WorkDay 
         items: request.items.map((item, index) =>
             testWorkItem({ ...item, id: item.id ?? `${id}-i${index}`, amount: null }),
         ),
+        workers: request.workerIds.map((id) => ({ id, name: id })),
         total: 0,
     });
 }

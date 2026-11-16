@@ -37,7 +37,7 @@ function saveError(error: unknown): { error: string | null; fieldErrors: FieldEr
     return isNotFound(error) ? { error: NOT_FOUND_ERROR, fieldErrors: {} } : describeError(error, SAVE_FALLBACK_ERROR);
 }
 
-/** Client payments of the site that is open in the detail page (Owner only). */
+/** Client payments of the site that is open in the detail page (Owner and Manager). */
 export const PaymentsStore = signalStore(
     { providedIn: 'root' },
     withState(initialState),

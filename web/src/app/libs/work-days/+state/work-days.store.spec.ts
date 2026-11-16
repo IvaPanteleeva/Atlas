@@ -15,6 +15,7 @@ describe('WorkDaysStore', () => {
         date,
         title: null,
         note: null,
+        workerIds: [],
         items: [
             {
                 id: null,

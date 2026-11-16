@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CreateSitePriceRequest, SitePrice, UpdateSitePriceRequest } from './site-price.model';
 
-/** Agreed prices of one site. Owner and Crew read; only Owner writes (the API checks it). */
+/** Agreed prices of one site. Owner and Manager read and write; only Owner deletes (the API checks it). */
 @Injectable({ providedIn: 'root' })
 export class SitePricesService {
     private readonly http = inject(HttpClient);

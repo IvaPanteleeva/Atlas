@@ -66,6 +66,25 @@
         </nz-form-control>
     </nz-form-item>
 
+    <fieldset class="workers-field">
+        <legend class="workers-label">Кой работи</legend>
+        @if (workerOptions().length) {
+            <div class="workers">
+                @for (option of workerOptions(); track option.id) {
+                    <label class="worker" [class.on]="isWorker(option.id)">
+                        <input type="checkbox" [checked]="isWorker(option.id)" (change)="toggleWorker(option.id)" />
+                        {{ option.name }}
+                    </label>
+                }
+            </div>
+        } @else {
+            <p class="workers-empty">Няма хора в екипа. Добави ги в „Хора“.</p>
+        }
+        @if (serverError('workerIds'); as message) {
+            <div class="server-error">{{ message }}</div>
+        }
+    </fieldset>
+
     <div class="items" formArrayName="items">
         @for (item of items.controls; track item; let i = $index) {
             <fieldset class="item-card" [formGroupName]="i">

@@ -1,0 +1,66 @@
+:host {
+    display: block;
+}
+
+// Same panel as the other lists: surface, 1px line, radius 8px.
+.contacts,
+.empty {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.contacts {
+    padding: 0;
+    list-style: none;
+
+    li + li {
+        border-top: 1px solid var(--line);
+    }
+}
+
+.empty {
+    padding: 16px;
+    color: var(--muted);
+}
+
+.contact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 16px;
+}
+
+.head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13.5px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+.edit {
+    flex: none;
+    min-height: 36px;
+    margin: -8px -7px -8px 0;
+    color: var(--muted);
+}
+
+.role {
+    margin-left: 8px;
+    color: var(--muted);
+    font-size: 13px;
+}

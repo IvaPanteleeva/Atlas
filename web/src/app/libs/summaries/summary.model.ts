@@ -1,4 +1,4 @@
-/** Money of one site, computed by the server (GET /api/sites/{siteId}/summary). Owner only. */
+/** Money of one site, computed by the server (GET /api/sites/{siteId}/summary). Owner and Manager. */
 export interface SiteSummary {
     /** Sum of the items with a price (also those to be clarified). */
     earned: number;
@@ -39,7 +39,7 @@ export interface SiteSummaryRow {
     openCount: number;
 }
 
-/** GET /api/sites/summaries. Owner only. */
+/** GET /api/sites/summaries. Owner and Manager. */
 export interface SitesSummaries {
     totals: SummaryTotals;
     sites: SiteSummaryRow[];

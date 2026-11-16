@@ -22,6 +22,7 @@
                         [company]="company"
                         [editing]="editingId() === company.id"
                         [saving]="store.saving()"
+                        [canDelete]="auth.isOwner()"
                         (editStart)="startEdit(company.id)"
                         (editCancel)="cancelEdit()"
                         (renamed)="rename(company.id, $event)"

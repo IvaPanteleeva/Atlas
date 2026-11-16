@@ -17,7 +17,7 @@ import { SiteListComponent } from '../site-list/site-list.component';
 
 /**
  * Smart page "Обекти": the list and the "Нов обект" form. Only this component talks to the stores.
- * Owner also sees the money: the totals above the list and the amounts on each row (Crew gets 403 there).
+ * Owner and Manager see the money: the totals above the list and the amounts on each row.
  */
 @Component({
     selector: 'atlas-sites-page',
@@ -47,7 +47,7 @@ export class SitesPageComponent {
 
     constructor() {
         void this.store.load();
-        if (this.auth.isOwner()) {
+        if (this.auth.isStaff()) {
             void this.summaries.loadAll();
         }
     }

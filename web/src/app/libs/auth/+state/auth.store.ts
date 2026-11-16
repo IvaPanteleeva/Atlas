@@ -40,7 +40,9 @@ export const AuthStore = signalStore(
     withComputed(({ user, status }) => ({
         isAuthenticated: computed(() => status() === 'authenticated'),
         role: computed(() => user()?.role ?? null),
-        isStaff: computed(() => user()?.role === 'Owner' || user()?.role === 'Crew'),
+        /** Owner or Manager: everything in the internal app except deleting and login profiles. */
+        isStaff: computed(() => user()?.role === 'Owner' || user()?.role === 'Manager'),
+        /** Owner only: deleting and login profiles. */
         isOwner: computed(() => user()?.role === 'Owner'),
         isClient: computed(() => user()?.role === 'ClientViewer'),
     })),

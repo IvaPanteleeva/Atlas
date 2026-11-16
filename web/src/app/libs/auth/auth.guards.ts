@@ -22,7 +22,7 @@ export const guestGuard: CanMatchFn = () => {
     return store.isAuthenticated() ? inject(Router).parseUrl(homeUrlFor(store.role())) : true;
 };
 
-/** Internal pages are for Owner and Crew; the client goes to the portal. */
+/** Internal pages are for Owner and Manager; the client goes to the portal. */
 export const staffGuard: CanActivateFn = () => {
     return inject(AuthStore).isStaff() ? true : inject(Router).parseUrl('/portal');
 };

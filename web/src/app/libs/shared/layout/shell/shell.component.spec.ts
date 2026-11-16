@@ -10,8 +10,10 @@ import { AuthStore } from '../../../auth/+state/auth.store';
 import { Me, Role } from '../../../auth/auth.model';
 import { AuthService } from '../../../auth/auth.service';
 import { CompaniesService } from '../../../companies/companies.service';
+import { PeopleService } from '../../../people/people.service';
 import { ServicesService } from '../../../services/services.service';
 import { SitesService } from '../../../sites/sites.service';
+import { UsersService } from '../../../users/users.service';
 import { APP_ICONS } from '../../icons';
 
 class FakeAuthService {
@@ -42,6 +44,8 @@ describe('ShellComponent', () => {
                 // /sites is the start page; it loads the list.
                 { provide: SitesService, useValue: { list: () => of([]) } },
                 { provide: ServicesService, useValue: { list: () => of([]) } },
+                { provide: PeopleService, useValue: { list: () => of([]) } },
+                { provide: UsersService, useValue: { list: () => of([]) } },
             ],
         });
     });
@@ -70,7 +74,7 @@ describe('ShellComponent', () => {
 
     it('marks the "Хора" tab as current after navigating to /people', async () => {
         const { element } = await render('/people');
-        expect(element.querySelector('.content h1')?.textContent).toBe('Хора');
+        expect(element.querySelector('.content h1')?.textContent?.trim()).toBe('Нашите хора');
 
         const current = Array.from(element.querySelectorAll('.tabs--bottom a[aria-current="page"]'));
         expect(current.map((a) => a.textContent?.trim())).toEqual(['Хора']);
@@ -91,7 +95,7 @@ describe('ShellComponent', () => {
     });
 
     it('shows the user name in the user menu', async () => {
-        const { element } = await render('/sites', 'Crew', 'petar');
+        const { element } = await render('/sites', 'Manager', 'petar');
 
         expect(element.querySelector('.user__name')?.textContent?.trim()).toBe('petar');
     });
@@ -157,16 +161,20 @@ describe('ShellComponent', () => {
         expect(path()).toBe('/companies');
     });
 
-    it('Crew has no "Фирми" in the user menu', async () => {
-        const { element } = await render('/sites', 'Crew');
+    it('Manager also has "Фирми" in the user menu and may open /companies', async () => {
+        const { harness, element } = await render('/sites', 'Manager');
 
         const items = await openUserMenu(element);
+        expect(items.map(itemText)).toEqual(['Фирми', 'Изход']);
 
-        expect(items.map(itemText)).toEqual(['Изход']);
+        items[0].querySelector<HTMLAnchorElement>('a')!.click();
+        await harness.fixture.whenStable();
+
+        expect(path()).toBe('/companies');
     });
 
-    it('Crew opening /companies is sent to /sites', async () => {
-        await render('/companies', 'Crew');
-        expect(path()).toBe('/sites');
+    it('the client opening /companies is sent to the portal', async () => {
+        await render('/companies', 'ClientViewer');
+        expect(path()).toBe('/portal');
     });
 });

@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { SaveSiteRequest, Site, SiteListItem } from './site.model';
 
-/** Site endpoints. Owner and Crew read and write; only Owner deletes (the API checks it). */
+/** Site endpoints. Owner and Manager read and write; only Owner deletes (the API checks it). */
 @Injectable({ providedIn: 'root' })
 export class SitesService {
     private readonly http = inject(HttpClient);

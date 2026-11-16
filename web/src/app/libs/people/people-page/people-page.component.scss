@@ -1,0 +1,66 @@
+:host {
+    display: block;
+}
+
+// Prototype .sec-head: title on the left, main action on the right.
+.sec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+
+    h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    button {
+        min-height: 40px;
+    }
+}
+
+// Prototype crew grid.
+.crew {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.contacts,
+.profiles {
+    margin-top: 28px;
+}
+
+.crew-empty {
+    margin: 0;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--muted);
+}
+
+.error {
+    margin-bottom: 12px;
+}
+
+.notice {
+    margin: 0 0 12px;
+    color: var(--good);
+}
+
+.note {
+    color: var(--muted);
+}

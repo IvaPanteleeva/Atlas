@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Payment, SavePaymentRequest } from './payment.model';
 
-/** Client payments of one site. Owner only (the API answers 403 to Crew). */
+/** Client payments of one site. Owner and Manager; only Owner deletes (the API checks it). */
 @Injectable({ providedIn: 'root' })
 export class PaymentsService {
     private readonly http = inject(HttpClient);

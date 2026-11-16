@@ -7,8 +7,19 @@
                     <span class="date__weekday">{{ row.weekday }}</span>
                 </div>
                 <div class="body">
-                    @if (row.day.title) {
-                        <h3 class="title">{{ row.day.title }}</h3>
+                    @if (row.day.title || row.day.workers.length) {
+                        <div class="head">
+                            @if (row.day.title) {
+                                <h3 class="title">{{ row.day.title }}</h3>
+                            }
+                            @if (row.day.workers.length) {
+                                <ul class="chips" aria-label="Кой работи">
+                                    @for (worker of row.day.workers; track worker.id) {
+                                        <li class="chip">{{ worker.name }}</li>
+                                    }
+                                </ul>
+                            }
+                        </div>
                     }
                     <table class="items">
                         <tbody>

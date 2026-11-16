@@ -9,7 +9,7 @@ import { SaveServiceRequest, Service } from '../service.model';
 import { ServiceFormComponent } from '../service-form/service-form.component';
 import { ServiceListComponent } from '../service-list/service-list.component';
 
-/** Smart page "Услуги": the shared list of kinds of work. Owner adds and edits; Crew only reads. */
+/** Smart page "Услуги": the shared list of kinds of work. Owner and Manager add and edit; only Owner deletes. */
 @Component({
     selector: 'atlas-services-page',
     imports: [NzAlertModule, NzButtonModule, NzIconModule, NzModalModule, ServiceListComponent, ServiceFormComponent],
@@ -30,7 +30,7 @@ export class ServicesPageComponent {
     }
 
     protected openForm(service: Service | null): void {
-        if (!this.auth.isOwner()) {
+        if (!this.auth.isStaff()) {
             return;
         }
         this.store.clearErrors();

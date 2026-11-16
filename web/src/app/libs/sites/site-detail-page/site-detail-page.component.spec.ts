@@ -10,7 +10,11 @@ import { AuthStore } from '../../auth/+state/auth.store';
 import { Me, Role } from '../../auth/auth.model';
 import { AuthService } from '../../auth/auth.service';
 import { CompaniesService } from '../../companies/companies.service';
+import { PeopleService } from '../../people/people.service';
+import { FakePeopleService } from '../../people/testing/fake-people.service';
 import { FakeServicesService } from '../../services/testing/fake-services.service';
+import { SiteContactsService } from '../../site-contacts/site-contacts.service';
+import { FakeSiteContactsService, testSiteContact } from '../../site-contacts/testing/fake-site-contacts.service';
 import { ServicesService } from '../../services/services.service';
 import { PaymentsService } from '../../payments/payments.service';
 import { FakePaymentsService, testPayment } from '../../payments/testing/fake-payments.service';
@@ -31,6 +35,8 @@ describe('SiteDetailPageComponent', () => {
     let workDays: FakeWorkDaysService;
     let payments: FakePaymentsService;
     let summaries: FakeSummariesService;
+    let people: FakePeopleService;
+    let contacts: FakeSiteContactsService;
     let role: Role;
 
     beforeAll(() => {
@@ -44,6 +50,8 @@ describe('SiteDetailPageComponent', () => {
         workDays = new FakeWorkDaysService();
         payments = new FakePaymentsService();
         summaries = new FakeSummariesService();
+        people = new FakePeopleService();
+        contacts = new FakeSiteContactsService();
         role = 'Owner';
         TestBed.configureTestingModule({
             providers: [
@@ -62,6 +70,8 @@ describe('SiteDetailPageComponent', () => {
                 { provide: WorkDaysService, useValue: workDays },
                 { provide: PaymentsService, useValue: payments },
                 { provide: SummariesService, useValue: summaries },
+                { provide: PeopleService, useValue: people },
+                { provide: SiteContactsService, useValue: contacts },
             ],
         });
     });
@@ -138,8 +148,8 @@ describe('SiteDetailPageComponent', () => {
         await vi.waitFor(() => expect(document.querySelector('.atlas-sheet atlas-site-form')).toBeNull());
     });
 
-    it('Crew sees no delete button', async () => {
-        role = 'Crew';
+    it('Manager edits the site but sees no delete button', async () => {
+        role = 'Manager';
         const { harness, page } = await render();
 
         const form = await openForm(harness, page);
@@ -216,14 +226,18 @@ describe('SiteDetailPageComponent', () => {
             );
         });
 
-        it('Crew sees the prices read-only', async () => {
-            role = 'Crew';
+        it('Manager adds and edits prices but cannot delete one', async () => {
+            role = 'Manager';
 
-            const { page } = await render();
+            const { harness, page } = await render();
 
             expect(rowNames(page)).toEqual(['Боядисване']);
-            expect(button(section(page), 'Цена')).toBeUndefined();
-            expect(section(page).querySelectorAll('button.price').length).toBe(0);
+            expect(button(section(page), 'Цена')).toBeDefined();
+            section(page).querySelector<HTMLButtonElement>('button.price')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForPriceForm();
+            expect(button(form, 'Запази')).toBeDefined();
+            expect(button(form, 'Изтрий')).toBeUndefined();
         });
 
         it('Owner adds a price with "+ Цена" (only free services, default price prefilled)', async () => {
@@ -290,6 +304,89 @@ describe('SiteDetailPageComponent', () => {
             expect(rowNames(page)).toEqual([]);
         });
     });
+    describe('"Контакти на обекта"', () => {
+        const section = (page: HTMLElement) => page.querySelector<HTMLElement>('section.site-contacts')!;
+        const contactForm = () => document.querySelector<HTMLElement>('.atlas-sheet atlas-site-contact-form');
+
+        async function waitForContactForm() {
+            return vi.waitFor(() => {
+                const form = contactForm();
+                expect(form).toBeTruthy();
+                return form!;
+            });
+        }
+
+        it('loads the contacts and shows them first, before "Работни дни", with the count', async () => {
+            contacts.listResult = of([testSiteContact()]);
+
+            const { page } = await render();
+
+            expect(contacts.calls).toEqual(['list s1']);
+            const sections = Array.from(page.querySelectorAll('section')).map((s) => s.className);
+            expect(sections[0]).toBe('site-contacts');
+            expect(sections.indexOf('site-contacts')).toBeLessThan(sections.indexOf('work-days'));
+            expect(section(page).querySelector('h2')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+                'Контакти на обекта 1',
+            );
+            expect(section(page).querySelector('.name')?.textContent?.trim()).toBe('Професорът');
+        });
+
+        it('shows the empty state', async () => {
+            const { page } = await render();
+
+            expect(section(page).textContent).toContain('Няма контакти за обекта.');
+        });
+
+        it('„+ Контакт“ adds a contact to the site', async () => {
+            const { harness, page } = await render();
+
+            button(section(page), 'Контакт')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForContactForm();
+            const name = form.querySelector<HTMLInputElement>('#sc-name')!;
+            name.value = 'Съседката';
+            name.dispatchEvent(new Event('input'));
+            await harness.fixture.whenStable();
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+
+            expect(contacts.lastRequest).toEqual({ name: 'Съседката', role: null, phone: null, note: null });
+            await vi.waitFor(() => expect(contactForm()).toBeNull());
+            expect(section(page).querySelector('.name')?.textContent?.trim()).toBe('Съседката');
+        });
+
+        it('Manager adds and edits contacts but sees no delete', async () => {
+            role = 'Manager';
+            contacts.listResult = of([testSiteContact({ id: 'sc1' })]);
+            const { harness, page } = await render();
+
+            expect(button(section(page), 'Контакт')).toBeDefined();
+            button(section(page), 'Редакция')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForContactForm();
+
+            expect(button(form, 'Запази')).toBeDefined();
+            expect(button(form, 'Изтрий')).toBeUndefined();
+        });
+
+        it('Owner edits and deletes (two steps)', async () => {
+            contacts.listResult = of([testSiteContact({ id: 'sc1' })]);
+            const { harness, page } = await render();
+
+            button(section(page), 'Редакция')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForContactForm();
+            button(form, 'Изтрий')!.click();
+            await harness.fixture.whenStable();
+            button(form, 'Потвърди изтриване')!.click();
+            await harness.fixture.whenStable();
+
+            expect(contacts.calls).toContain('remove s1 sc1');
+            await vi.waitFor(() => expect(contactForm()).toBeNull());
+            expect(section(page).textContent).toContain('Няма контакти за обекта.');
+        });
+    });
+
     describe('"Работни дни"', () => {
         const section = (page: HTMLElement) => page.querySelector<HTMLElement>('section.work-days')!;
         const dayForm = () => document.querySelector<HTMLElement>('.atlas-sheet atlas-work-day-form');
@@ -357,8 +454,28 @@ describe('SiteDetailPageComponent', () => {
             expect(loading()).toBeNull();
         });
 
-        it('Crew adds and edits days but sees no delete', async () => {
-            role = 'Crew';
+        it('the day form offers the crew under „Кой работи“ and sends the chosen workerIds (also Manager)', async () => {
+            role = 'Manager';
+            const { harness, page } = await render();
+            expect(people.calls).toEqual(['list']);
+
+            button(section(page), 'Ден работа')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForDayForm();
+            const pills = Array.from(form.querySelectorAll<HTMLLabelElement>('label.worker'));
+            expect(pills.map((pill) => pill.textContent?.trim())).toEqual(['Гошо', 'Пешо']);
+            pills[1].querySelector('input')!.click();
+            await harness.fixture.whenStable();
+            await type(harness, form.querySelector<HTMLInputElement>('#wd-item-0-description')!, 'Къртене');
+            await type(harness, form.querySelector<HTMLInputElement>('#wd-item-0-quantity')!, '1');
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+
+            expect(workDays.lastRequest?.workerIds).toEqual(['p3']);
+        });
+
+        it('Manager adds and edits days, may change prices, but sees no delete', async () => {
+            role = 'Manager';
             workDays.listResult = of([testWorkDay()]);
             const { harness, page } = await render();
 
@@ -369,7 +486,7 @@ describe('SiteDetailPageComponent', () => {
 
             expect(button(form, 'Запази')).toBeDefined();
             expect(button(form, 'Изтрий')).toBeUndefined();
-            expect(form.querySelector<HTMLInputElement>('#wd-item-0-rate')!.disabled).toBe(true);
+            expect(form.querySelector<HTMLInputElement>('#wd-item-0-rate')!.disabled).toBe(false);
         });
 
         it('a new day is saved, listed, and the site is reloaded (a lead becomes current)', async () => {
@@ -422,8 +539,8 @@ describe('SiteDetailPageComponent', () => {
             await vi.waitFor(() => expect(summaries.calls).toEqual(['site s1', 'site s1', 'site s1']));
         });
 
-        it('Crew saves a day without any money requests', async () => {
-            role = 'Crew';
+        it('Manager saving a day reloads the money too', async () => {
+            role = 'Manager';
             workDays.listResult = of([testWorkDay({ id: 'd1' })]);
             const { harness, page } = await render();
 
@@ -435,8 +552,7 @@ describe('SiteDetailPageComponent', () => {
             await vi.waitFor(() => expect(dayForm()).toBeNull());
 
             expect(workDays.calls.some((call) => call.startsWith('update s1 d1'))).toBe(true);
-            expect(summaries.calls).toEqual([]);
-            expect(payments.calls).toEqual([]);
+            await vi.waitFor(() => expect(summaries.calls).toEqual(['site s1', 'site s1']));
         });
 
         it('Owner deletes a day after confirming', async () => {
@@ -527,7 +643,7 @@ describe('SiteDetailPageComponent', () => {
 
             expect(payments.calls).toEqual(['list s1']);
             const sections = Array.from(page.querySelectorAll('section')).map((s) => s.className);
-            expect(sections).toEqual(['work-days', 'payments', 'prices']);
+            expect(sections).toEqual(['site-contacts', 'work-days', 'payments', 'prices']);
             expect(text(section(page)!.querySelector('h2'))).toBe('Плащания 2');
             expect(button(section(page)!, 'Плащане')).toBeDefined();
             expect(Array.from(section(page)!.querySelectorAll('button.payment .label')).map(text)).toEqual([
@@ -542,18 +658,21 @@ describe('SiteDetailPageComponent', () => {
             expect(text(section(page))).toContain('Няма плащания.');
         });
 
-        it('Crew sees neither the ledger nor the payments, and no money is requested', async () => {
-            role = 'Crew';
-            summaries.siteResult = of(testSiteSummary({ openCount: 2 }));
+        it('Manager sees the ledger and the payments, edits a payment but cannot delete it', async () => {
+            role = 'Manager';
+            payments.listResult = of([testPayment({ id: 'p1', amount: 500 })]);
 
-            const { page } = await render();
+            const { harness, page } = await render();
 
-            expect(ledger(page)).toBeNull();
-            expect(section(page)).toBeNull();
-            expect(page.querySelector('.pill.q')).toBeNull();
-            expect(summaries.calls).toEqual([]);
-            expect(payments.calls).toEqual([]);
-            expect(page.querySelector('section.work-days')).not.toBeNull();
+            expect(ledger(page)).not.toBeNull();
+            expect(summaries.calls).toEqual(['site s1']);
+            expect(payments.calls).toEqual(['list s1']);
+            expect(button(section(page)!, 'Плащане')).toBeDefined();
+            section(page)!.querySelector<HTMLButtonElement>('button.payment')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForPaymentForm();
+            expect(button(form, 'Запази')).toBeDefined();
+            expect(button(form, 'Изтрий')).toBeUndefined();
         });
 
         it('„+ Плащане“ saves a payment, lists it and reloads the money quietly', async () => {

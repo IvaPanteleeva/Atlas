@@ -1,0 +1,36 @@
+@if (contacts().length) {
+    <ul class="contacts">
+        @for (contact of contacts(); track contact.id) {
+            <li class="contact">
+                <div class="head">
+                    <span>
+                        <span class="name">{{ contact.name }}</span>
+                        @if (contact.role) {
+                            <span class="role">{{ contact.role }}</span>
+                        }
+                    </span>
+                    @if (canEdit()) {
+                        <button
+                            nz-button
+                            nzType="text"
+                            nzSize="small"
+                            type="button"
+                            class="edit"
+                            (click)="edit.emit(contact)"
+                        >
+                            Редакция
+                        </button>
+                    }
+                </div>
+                @if (contact.phone; as phone) {
+                    <atlas-phone-actions [phone]="phone" />
+                }
+                @if (contact.note) {
+                    <p class="note">{{ contact.note }}</p>
+                }
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">Няма контакти за обекта.</p>
+}

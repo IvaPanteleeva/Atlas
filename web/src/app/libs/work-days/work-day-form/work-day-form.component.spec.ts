@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
+import { Person } from '../../people/person.model';
+import { testPerson } from '../../people/testing/fake-people.service';
 import { Service } from '../../services/service.model';
 import { APP_ICONS } from '../../shared/icons';
 import { SitePrice } from '../../site-prices/site-price.model';
@@ -12,6 +14,13 @@ const services: Service[] = [
     { id: 'sv1', name: 'Боядисване', unit: 'SquareMeter', defaultRate: 6 },
     { id: 'sv2', name: 'Первази', unit: 'LinearMeter', defaultRate: null },
     { id: 'sv3', name: 'Шпакловка', unit: 'SquareMeter', defaultRate: 8.5 },
+];
+
+/** The crew (people who work with us): Гошо and Пешо; Иван is a contact (not offered for new days). */
+const people: Person[] = [
+    testPerson({ id: 'p3', name: 'Пешо' }),
+    testPerson({ id: 'p1', name: 'Гошо' }),
+    testPerson({ id: 'p2', name: 'Иван', isCrew: false }),
 ];
 
 /** Боядисване has an agreed price on this site (6,50 instead of the default 6). */
@@ -44,6 +53,7 @@ describe('WorkDayFormComponent', () => {
         fixture.componentRef.setInput('services', services);
         fixture.componentRef.setInput('sitePrices', sitePrices);
         fixture.componentRef.setInput('canEditPrices', true);
+        fixture.componentRef.setInput('people', people);
         element = fixture.nativeElement as HTMLElement;
         await fixture.whenStable();
     });
@@ -190,6 +200,7 @@ describe('WorkDayFormComponent', () => {
                 date: '2026-11-16',
                 title: 'Шпакловка финал',
                 note: 'Ключ при съседа',
+                workerIds: [],
                 items: [
                     {
                         id: null,
@@ -266,7 +277,7 @@ describe('WorkDayFormComponent', () => {
         expect(text(field(0, 'quantity').closest('nz-form-item'))).toContain('Въведи количество');
     });
 
-    it('Crew cannot change the price: it shows the resolved price with a hint and sends null', async () => {
+    it('without canEditPrices the price is read-only: it shows the resolved price with a hint and sends null', async () => {
         await set('canEditPrices', false);
 
         await chooseService(0, 'Боядисване · м²');
@@ -361,5 +372,86 @@ describe('WorkDayFormComponent', () => {
 
         button('Отказ')!.click();
         expect(cancels).toBe(1);
+    });
+
+    describe('„Кой работи“', () => {
+        const pills = () => Array.from(element.querySelectorAll<HTMLLabelElement>('.workers label.worker'));
+        const pillNames = () => pills().map((pill) => text(pill));
+        const checked = () =>
+            pills()
+                .filter((pill) => pill.querySelector('input')!.checked)
+                .map((p) => text(p));
+
+        async function toggle(name: string) {
+            pills()
+                .find((pill) => text(pill) === name)!
+                .querySelector('input')!
+                .click();
+            await fixture.whenStable();
+        }
+
+        async function fillAndSubmit() {
+            await fillFreeText(0, 'Боя', '1');
+            await submit();
+        }
+
+        it('offers the crew by name (no contacts), none chosen for a new day', () => {
+            expect(text(element.querySelector('.workers-label'))).toBe('Кой работи');
+            expect(pillNames()).toEqual(['Гошо', 'Пешо']);
+            expect(checked()).toEqual([]);
+            expect(element.querySelector('label.worker input[type="checkbox"]')).toBeTruthy();
+        });
+
+        it('toggling a pill marks it and sends the chosen workerIds', async () => {
+            await toggle('Пешо');
+            await toggle('Гошо');
+            expect(checked()).toEqual(['Гошо', 'Пешо']);
+            expect(pills()[0].classList).toContain('on');
+
+            await toggle('Пешо');
+            expect(checked()).toEqual(['Гошо']);
+            expect(pills()[1].classList).not.toContain('on');
+
+            await fillAndSubmit();
+            expect(saved[0].workerIds).toEqual(['p1']);
+        });
+
+        it('a day keeps people who are no longer crew (or not in the list at all) chosen', async () => {
+            await set(
+                'day',
+                testWorkDay({
+                    workers: [
+                        { id: 'p2', name: 'Иван' },
+                        { id: 'p9', name: 'Ангел' },
+                        { id: 'p3', name: 'Пешо' },
+                    ],
+                }),
+            );
+
+            expect(pillNames()).toEqual(['Ангел', 'Гошо', 'Иван', 'Пешо']);
+            expect(checked()).toEqual(['Ангел', 'Иван', 'Пешо']);
+
+            await toggle('Ангел');
+            await submit();
+            expect(saved[0].workerIds).toEqual(['p2', 'p3']);
+        });
+
+        it('a new day after editing starts with nobody chosen', async () => {
+            await set('day', testWorkDay({ workers: [{ id: 'p1', name: 'Гошо' }] }));
+            expect(checked()).toEqual(['Гошо']);
+
+            await set('day', null);
+
+            expect(checked()).toEqual([]);
+        });
+
+        it('without crew shows a hint; the server error for workerIds is under the field', async () => {
+            await set('people', []);
+            expect(text(element.querySelector('.workers-empty'))).toBe('Няма хора в екипа. Добави ги в „Хора“.');
+
+            await set('fieldErrors', { workerIds: 'Човекът не е от екипа.' });
+            expect(text(element.querySelector('.workers-field'))).toContain('Човекът не е от екипа.');
+            expect(element.querySelector('nz-alert')).toBeNull();
+        });
     });
 });

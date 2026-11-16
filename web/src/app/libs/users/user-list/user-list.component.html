@@ -1,0 +1,40 @@
+@if (users().length) {
+    <ul class="users">
+        @for (user of users(); track user.id) {
+            <li class="user">
+                <div class="info">
+                    <span class="user-name">
+                        {{ user.userName }}
+                        @if (user.id === currentUserId()) {
+                            <span class="me">(ти)</span>
+                        }
+                    </span>
+                    <span class="role">
+                        {{ roleLabels[user.role] }}
+                        @if (user.companyName) {
+                            · {{ user.companyName }}
+                        }
+                    </span>
+                </div>
+                <div class="actions">
+                    <button nz-button nzSize="small" type="button" (click)="newPassword.emit(user)">Нова парола</button>
+                    @if (user.id !== currentUserId()) {
+                        <button
+                            nz-button
+                            nzDanger
+                            nzSize="small"
+                            type="button"
+                            [nzType]="confirmingId() === user.id ? 'primary' : 'default'"
+                            [disabled]="saving()"
+                            (click)="requestRemove(user)"
+                        >
+                            {{ confirmingId() === user.id ? 'Потвърди изтриване' : 'Изтрий' }}
+                        </button>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">Няма профили.</p>
+}

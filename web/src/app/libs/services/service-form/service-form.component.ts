@@ -51,6 +51,8 @@ function notBlank(control: AbstractControl<string>): ValidationErrors | null {
 })
 export class ServiceFormComponent {
     readonly service = input<Service | null>(null);
+    /** Owner only. */
+    readonly canDelete = input(false);
     readonly saving = input(false);
     readonly error = input<string | null>(null);
     readonly fieldErrors = input<FieldErrors>({});

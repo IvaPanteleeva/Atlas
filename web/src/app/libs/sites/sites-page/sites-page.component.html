@@ -10,7 +10,7 @@
     <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
 }
 
-@if (auth.isOwner()) {
+@if (auth.isStaff()) {
     @if (summaries.totals(); as totals) {
         <!-- „Дължат ни“ is never negative (overpaid sites are shown apart), so it never reads „Надплатено“. -->
         <atlas-ledger
@@ -43,7 +43,7 @@
 } @else {
     <atlas-site-list
         [sites]="store.list()"
-        [summaries]="auth.isOwner() ? summaries.bySite() : null"
+        [summaries]="auth.isStaff() ? summaries.bySite() : null"
         (open)="openSite($event)"
     />
 }
@@ -61,7 +61,7 @@
     <ng-container *nzModalContent>
         <atlas-site-form
             [companies]="companies.companies()"
-            [canCreateCompany]="auth.isOwner()"
+            [canCreateCompany]="auth.isStaff()"
             [saving]="store.saving()"
             [error]="store.error()"
             [fieldErrors]="store.fieldErrors()"

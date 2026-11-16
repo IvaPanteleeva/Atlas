@@ -61,6 +61,17 @@ describe('AuthStore', () => {
         expect(store.isClient()).toBe(false);
     });
 
+    it('Manager is staff but not Owner', async () => {
+        fake.meResult = of({ id: '3', userName: 'gosho', role: 'Manager', companyId: null });
+
+        await store.loadMe();
+
+        expect(store.role()).toBe('Manager');
+        expect(store.isStaff()).toBe(true);
+        expect(store.isOwner()).toBe(false);
+        expect(store.isClient()).toBe(false);
+    });
+
     it('loadMe with 401 marks the user as anonymous', async () => {
         fake.meResult = httpError(401);
 

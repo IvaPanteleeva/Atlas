@@ -27,6 +27,8 @@ export class CompanyRowComponent {
     readonly company = input.required<Company>();
     /** Controlled by the page, so only one row is edited at a time and it closes only after a successful save. */
     readonly editing = input(false);
+    /** Owner only. */
+    readonly canDelete = input(false);
     readonly saving = input(false);
 
     readonly editStart = output<void>();

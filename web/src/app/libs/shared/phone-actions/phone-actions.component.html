@@ -1,0 +1,8 @@
+<span class="phone num" #phoneText>{{ phone() }}</span>
+<span class="actions">
+    @if (showCall()) {
+        <a nz-button nzSize="small" class="call" [href]="telHref()">Обади се</a>
+    }
+    <button nz-button nzSize="small" type="button" class="copy" (click)="copy()">Копирай</button>
+</span>
+<span class="copy-status" role="status" aria-live="polite">{{ status() }}</span>

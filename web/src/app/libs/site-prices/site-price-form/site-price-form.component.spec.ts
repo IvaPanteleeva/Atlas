@@ -150,7 +150,9 @@ describe('SitePriceFormComponent', () => {
         await typeRate('7');
         await submit();
         expect(saved).toEqual([{ serviceId: 'sv1', rate: 7 }]);
+        expect(button('Изтрий')).toBeUndefined();
 
+        await set('canDelete', true);
         button('Изтрий')!.click();
         await fixture.whenStable();
         expect(deletes).toBe(0);

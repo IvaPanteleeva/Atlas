@@ -173,8 +173,15 @@ describe('PaymentFormComponent', () => {
         expect(alert).not.toContain('Сумата');
     });
 
+    it('delete is only shown with canDelete (Owner)', async () => {
+        await set('payment', testPayment());
+
+        expect(button('Изтрий')).toBeUndefined();
+    });
+
     it('delete needs a second click when editing; a new payment resets it; Отказ emits cancel', async () => {
         await set('payment', testPayment());
+        await set('canDelete', true);
 
         button('Изтрий')!.click();
         await fixture.whenStable();

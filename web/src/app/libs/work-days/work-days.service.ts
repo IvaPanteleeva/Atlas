@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { SaveWorkDayRequest, WorkDay } from './work-day.model';
 
-/** Work days of one site. Owner and Crew read and write; only Owner deletes (the API checks it). */
+/** Work days of one site. Owner and Manager read and write; only Owner deletes (the API checks it). */
 @Injectable({ providedIn: 'root' })
 export class WorkDaysService {
     private readonly http = inject(HttpClient);

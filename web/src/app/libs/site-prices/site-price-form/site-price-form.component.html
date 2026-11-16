@@ -84,7 +84,7 @@
         }
 
         <div class="footer">
-            @if (price()) {
+            @if (price() && canDelete()) {
                 <button
                     nz-button
                     nzDanger

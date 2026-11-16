@@ -1,6 +1,6 @@
 <div class="sec-head">
     <h1>Услуги</h1>
-    @if (auth.isOwner()) {
+    @if (auth.isStaff()) {
         <button nz-button nzType="primary" type="button" (click)="openForm(null)">
             <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
             Нова услуга
@@ -16,7 +16,7 @@
 @if (store.loading() && !store.services().length) {
     <p class="note">Зареждане…</p>
 } @else {
-    <atlas-service-list [services]="store.services()" [canEdit]="auth.isOwner()" (open)="openForm($event)" />
+    <atlas-service-list [services]="store.services()" [canEdit]="auth.isStaff()" (open)="openForm($event)" />
 }
 
 <nz-modal
@@ -32,6 +32,7 @@
     <ng-container *nzModalContent>
         <atlas-service-form
             [service]="editing()"
+            [canDelete]="auth.isOwner()"
             [saving]="store.saving()"
             [error]="store.error()"
             [fieldErrors]="store.fieldErrors()"

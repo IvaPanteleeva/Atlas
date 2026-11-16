@@ -50,7 +50,7 @@ describe('auth guards', () => {
     it('homeUrlFor sends ClientViewer to /portal and staff to /sites', () => {
         expect(homeUrlFor('ClientViewer')).toBe('/portal');
         expect(homeUrlFor('Owner')).toBe('/sites');
-        expect(homeUrlFor('Crew')).toBe('/sites');
+        expect(homeUrlFor('Manager')).toBe('/sites');
         expect(homeUrlFor(null)).toBe('/sites');
     });
 
@@ -65,7 +65,7 @@ describe('auth guards', () => {
         });
 
         it('lets a signed-in user through', async () => {
-            await signInAs('Crew');
+            await signInAs('Manager');
 
             expect(run(() => authGuard(route, state('/sites')))).toBe(true);
         });
@@ -98,7 +98,7 @@ describe('auth guards', () => {
             expect(serialize(run(() => staffGuard(route, state('/sites'))))).toBe('/portal');
         });
 
-        it('lets Owner and Crew through', async () => {
+        it('lets Owner and Manager through', async () => {
             await signInAs('Owner');
             expect(run(() => staffGuard(route, state('/sites')))).toBe(true);
         });
@@ -125,8 +125,8 @@ describe('auth guards', () => {
             expect(run(() => ownerGuard(route, state('/companies')))).toBe(true);
         });
 
-        it('sends Crew to /sites', async () => {
-            await signInAs('Crew');
+        it('sends Manager to /sites', async () => {
+            await signInAs('Manager');
 
             expect(serialize(run(() => ownerGuard(route, state('/companies'))))).toBe('/sites');
         });
