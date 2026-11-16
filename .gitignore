@@ -502,3 +502,6 @@ Project-Assignment.docx
 
 # Course notes and screenshots, kept locally only
 docs/
+
+# Claude Code worktrees
+.claude/worktrees/
