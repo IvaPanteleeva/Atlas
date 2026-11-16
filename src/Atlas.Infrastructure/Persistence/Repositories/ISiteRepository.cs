@@ -21,6 +21,6 @@ public interface ISiteRepository : IRepository<Site>
     // Replaces all fields. NotFound, or Validation on companyId when the company does not exist.
     Task<Result<SiteResponse>> UpdateAsync(Guid id, UpdateSiteRequest request, CancellationToken cancellationToken);
 
-    // NotFound when there is no such site.
+    // NotFound when there is no such site; Conflict when it has work days (feature 6: or client payments).
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken);
 }

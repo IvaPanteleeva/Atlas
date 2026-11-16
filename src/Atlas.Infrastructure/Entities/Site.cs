@@ -24,4 +24,14 @@ public class Site
 
     // Internal; never goes out through /portal/... (CLAUDE.md "Достъп за възложителя").
     public string? Note { get; set; }
+
+    // A new work day on a Lead site means the work has started (CLAUDE.md "Обекти и фирми"):
+    // every time, not only the first day. A Done site stays Done (the day is extra work); Active stays Active.
+    public void OnWorkDayAdded()
+    {
+        if (this.Status == SiteStatus.Lead)
+        {
+            this.Status = SiteStatus.Active;
+        }
+    }
 }

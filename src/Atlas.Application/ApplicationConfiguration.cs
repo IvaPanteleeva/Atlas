@@ -4,6 +4,7 @@ using System.Globalization;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 public static class ApplicationConfiguration
 {
@@ -13,6 +14,9 @@ public static class ApplicationConfiguration
     {
         // Validation messages in Bulgarian (FluentValidation's built-in BulgarianLanguage).
         ValidatorOptions.Global.LanguageManager.Culture = new CultureInfo("bg");
+
+        // The clock for "today" (work day dates); the tests can replace it.
+        services.TryAddSingleton(TimeProvider.System);
 
         services.AddValidatorsFromAssembly(typeof(ApplicationConfiguration).Assembly);
 

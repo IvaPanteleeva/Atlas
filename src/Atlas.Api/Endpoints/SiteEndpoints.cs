@@ -47,9 +47,10 @@ public static class SiteEndpoints
             .RequireAuthorization(Policies.Owner)
             .WithName("DeleteSite")
             .WithSummary("Delete a site")
-            .WithDescription("Deletes a site (Owner only).")
+            .WithDescription("Deletes a site (Owner only). A site with work days cannot be deleted (409); set it to Done.")
             .Produces(StatusCodes.Status204NoContent)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return app;
     }

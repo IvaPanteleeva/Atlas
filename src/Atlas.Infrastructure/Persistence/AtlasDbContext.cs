@@ -17,6 +17,10 @@ public sealed class AtlasDbContext(DbContextOptions<AtlasDbContext> options)
 
     public DbSet<SitePrice> SitePrices => this.Set<SitePrice>();
 
+    public DbSet<WorkDay> WorkDays => this.Set<WorkDay>();
+
+    public DbSet<WorkItem> WorkItems => this.Set<WorkItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Identity's own model first, so our configurations can extend it.

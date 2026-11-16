@@ -13,6 +13,8 @@ public sealed class SiteRepository(AtlasDbContext data) : DataRepository<Site>(d
 
     public const string CompanyNotFoundMessage = "Няма такава фирма.";
 
+    public const string HasRecordsMessage = "Обектът има записи";
+
     private static readonly Expression<Func<Site, SiteResponse>> ToResponse = s => new SiteResponse(
         s.Id,
         s.Name,
@@ -104,10 +106,27 @@ public sealed class SiteRepository(AtlasDbContext data) : DataRepository<Site>(d
             return Error.NotFound(NotFoundMessage);
         }
 
-        // Features 5/6: a site with work days or client payments cannot be deleted
-        // → Error.Conflict("Обектът има записи"); it is set to Done instead (CLAUDE.md "Обекти и фирми").
+        // A site with records cannot be deleted; it is set to Done instead (CLAUDE.md "Обекти и фирми").
+        // Feature 6: client payments join this check.
+        if (await this.Data.WorkDays.AnyAsync(d => d.SiteId == id, cancellationToken))
+        {
+            return Error.Conflict(HasRecordsMessage);
+        }
+
         this.Delete(site);
-        await this.SaveAsync(cancellationToken);
+
+        try
+        {
+            await this.SaveAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.ForeignKeyViolation,
+        })
+        {
+            // A work day was added between the check and the save (the FK is Restrict).
+            return Error.Conflict(HasRecordsMessage);
+        }
 
         return Result.Success;
     }
