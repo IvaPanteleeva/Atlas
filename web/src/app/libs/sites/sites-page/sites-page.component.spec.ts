@@ -12,6 +12,8 @@ import { AuthService } from '../../auth/auth.service';
 import { CompaniesService } from '../../companies/companies.service';
 import { Company } from '../../companies/company.model';
 import { APP_ICONS } from '../../shared/icons';
+import { FakeSummariesService, testSummaryRow, testTotals } from '../../summaries/testing/fake-summaries.service';
+import { SummariesService } from '../../summaries/summaries.service';
 import { SitesService } from '../sites.service';
 import { FakeSitesService, httpError } from '../testing/fake-sites.service';
 
@@ -30,6 +32,7 @@ class FakeCompaniesService {
 describe('SitesPageComponent', () => {
     let fake: FakeSitesService;
     let companies: FakeCompaniesService;
+    let summaries: FakeSummariesService;
     let role: Role;
 
     beforeAll(() => {
@@ -39,6 +42,7 @@ describe('SitesPageComponent', () => {
     beforeEach(() => {
         fake = new FakeSitesService();
         companies = new FakeCompaniesService();
+        summaries = new FakeSummariesService();
         role = 'Owner';
         TestBed.configureTestingModule({
             providers: [
@@ -52,6 +56,7 @@ describe('SitesPageComponent', () => {
                 },
                 { provide: SitesService, useValue: fake },
                 { provide: CompaniesService, useValue: companies },
+                { provide: SummariesService, useValue: summaries },
             ],
         });
     });
@@ -207,5 +212,122 @@ describe('SitesPageComponent', () => {
 
         await vi.waitFor(() => expect(document.querySelector('.atlas-sheet atlas-site-form')).toBeNull());
         expect(fake.calls).toEqual(['list']);
+    });
+
+    describe('money', () => {
+        const text = (node: Element | null | undefined) => node?.textContent?.replace(/\s+/g, ' ').trim();
+
+        beforeEach(() => {
+            summaries.allResult = of({
+                totals: testTotals({ earned: 1300, paid: 500, owed: 800, openCount: 3 }),
+                sites: [
+                    testSummaryRow({ siteId: 's1', earned: 1157.89, paid: 500, remaining: 657.89, openCount: 0 }),
+                    testSummaryRow({ siteId: 's2', earned: 142.11, paid: 0, remaining: 142.11, openCount: 3 }),
+                ],
+            });
+        });
+
+        it('Owner sees the totals above the list with „Дължат ни“, and the open count', async () => {
+            const { page } = await render();
+
+            expect(summaries.calls).toEqual(['all']);
+            const ledger = page.querySelector('atlas-ledger')!;
+            expect(Array.from(ledger.querySelectorAll('.ledger__label')).map(text)).toEqual([
+                'Изработено',
+                'Платено',
+                'Дължат ни',
+            ]);
+            expect(Array.from(ledger.querySelectorAll('.ledger__value')).map(text)).toEqual([
+                '1 300,00 €',
+                '500,00 €',
+                '800,00 €',
+            ]);
+            expect(ledger.compareDocumentPosition(page.querySelector('atlas-site-list')!)).toBe(
+                Node.DOCUMENT_POSITION_FOLLOWING,
+            );
+            expect(text(page.querySelector('.pill.q'))).toBe('3 без цена / за уточняване');
+        });
+
+        it('Owner sees the money on each row', async () => {
+            const { page } = await render();
+
+            const rows = Array.from(page.querySelectorAll('button.site'));
+            expect(rows.map((row) => text(row.querySelector('.money__earned')))).toEqual(['1 157,89 €', '142,11 €']);
+            expect(rows.map((row) => text(row.querySelector('.money__rest')))).toEqual([
+                'остават 657,89 €',
+                'остават 142,11 €',
+            ]);
+        });
+
+        it('no pill when nothing is open', async () => {
+            summaries.allResult = of({ totals: testTotals({ earned: 0, paid: 0, owed: 0 }), sites: [] });
+
+            const { page } = await render();
+
+            expect(page.querySelector('atlas-ledger')).not.toBeNull();
+            expect(page.querySelector('.pill.q')).toBeNull();
+        });
+
+        it('„Дължат ни“ does not net an overpaid site; the overpaid money gets its own green pill', async () => {
+            summaries.allResult = of({
+                totals: testTotals({ earned: 1410, paid: 1015, owed: 410, overpaid: 15, overpaidSiteCount: 1 }),
+                sites: [
+                    testSummaryRow({ siteId: 's1', earned: 1000, paid: 590, remaining: 410 }),
+                    testSummaryRow({ siteId: 's2', earned: 410, paid: 425, remaining: -15 }),
+                ],
+            });
+
+            const { page } = await render();
+
+            const ledger = page.querySelector('atlas-ledger')!;
+            expect(Array.from(ledger.querySelectorAll('.ledger__label')).map(text)).toEqual([
+                'Изработено',
+                'Платено',
+                'Дължат ни',
+            ]);
+            expect(Array.from(ledger.querySelectorAll('.ledger__value')).map(text)).toEqual([
+                '1 410,00 €',
+                '1 015,00 €',
+                '410,00 €',
+            ]);
+            expect(ledger.querySelectorAll('.ledger__col')[2].classList).toContain('ledger__col--warn');
+            const pill = page.querySelector('.pill.good');
+            expect(text(pill)).toBe('Надплатено 15,00 € по 1 обект');
+            expect(pill!.classList).not.toContain('q');
+        });
+
+        it('the overpaid pill counts sites: „по 2 обекта“', async () => {
+            summaries.allResult = of({
+                totals: testTotals({ owed: 0, overpaid: 40.5, overpaidSiteCount: 2 }),
+                sites: [],
+            });
+
+            const { page } = await render();
+
+            expect(text(page.querySelector('.pill.good'))).toBe('Надплатено 40,50 € по 2 обекта');
+            const last = page.querySelectorAll('atlas-ledger .ledger__col')[2];
+            expect(text(last.querySelector('.ledger__label'))).toBe('Дължат ни');
+            expect(text(last.querySelector('.ledger__value'))).toBe('0,00 €');
+            expect(last.classList).toContain('ledger__col--good');
+        });
+
+        it('no overpaid pill when nothing is overpaid', async () => {
+            const { page } = await render();
+
+            expect(page.querySelector('atlas-ledger')).not.toBeNull();
+            expect(page.querySelector('.pill.good')).toBeNull();
+        });
+
+        it('Crew sees the list without money and /summaries is not called', async () => {
+            role = 'Crew';
+
+            const { page } = await render();
+
+            expect(summaries.calls).toEqual([]);
+            expect(page.querySelector('atlas-ledger')).toBeNull();
+            expect(page.querySelector('.pill.q, .pill.good')).toBeNull();
+            expect(page.querySelectorAll('button.site').length).toBe(2);
+            expect(page.querySelector('.money')).toBeNull();
+        });
     });
 });

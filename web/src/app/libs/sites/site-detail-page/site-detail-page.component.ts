@@ -17,11 +17,17 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { AuthStore } from '../../auth/+state/auth.store';
 import { CompaniesStore } from '../../companies/+state/companies.store';
 import { Company } from '../../companies/company.model';
+import { PaymentsStore } from '../../payments/+state/payments.store';
+import { Payment, SavePaymentRequest } from '../../payments/payment.model';
+import { PaymentFormComponent } from '../../payments/payment-form/payment-form.component';
+import { PaymentListComponent } from '../../payments/payment-list/payment-list.component';
 import { ServicesStore } from '../../services/+state/services.store';
+import { LedgerComponent } from '../../shared/ledger/ledger.component';
 import { SitePricesStore } from '../../site-prices/+state/site-prices.store';
 import { CreateSitePriceRequest, SitePrice } from '../../site-prices/site-price.model';
 import { SitePriceFormComponent } from '../../site-prices/site-price-form/site-price-form.component';
 import { SitePriceListComponent } from '../../site-prices/site-price-list/site-price-list.component';
+import { SummariesStore } from '../../summaries/+state/summaries.store';
 import { WorkDaysStore } from '../../work-days/+state/work-days.store';
 import { SaveWorkDayRequest, WorkDay } from '../../work-days/work-day.model';
 import { WorkDayFormComponent } from '../../work-days/work-day-form/work-day-form.component';
@@ -31,7 +37,10 @@ import { SaveSiteRequest } from '../site.model';
 import { SiteFormComponent } from '../site-form/site-form.component';
 import { SiteHeaderComponent } from '../site-header/site-header.component';
 
-/** Smart page for one site (/sites/:id): header, "Работни дни" and "Цени за обекта"; more sections come later. */
+/**
+ * Smart page for one site (/sites/:id): header, "Работни дни", "Плащания" and "Цени за обекта".
+ * The money (ledger and payments) is Owner only: for Crew it is neither shown nor requested (the API answers 403).
+ */
 @Component({
     selector: 'atlas-site-detail-page',
     imports: [
@@ -46,8 +55,11 @@ import { SiteHeaderComponent } from '../site-header/site-header.component';
         SitePriceListComponent,
         SitePriceFormComponent,
         WorkDayListComponent,
-        // Only used inside @defer: the form (and the date picker) is a separate lazy chunk.
+        LedgerComponent,
+        PaymentListComponent,
+        // Only used inside @defer: the forms (and the date picker) are separate lazy chunks.
         WorkDayFormComponent,
+        PaymentFormComponent,
     ],
     templateUrl: './site-detail-page.component.html',
     styleUrl: './site-detail-page.component.scss',
@@ -63,6 +75,8 @@ export class SiteDetailPageComponent {
     protected readonly prices = inject(SitePricesStore);
     protected readonly services = inject(ServicesStore);
     protected readonly workDays = inject(WorkDaysStore);
+    protected readonly summaries = inject(SummariesStore);
+    protected readonly payments = inject(PaymentsStore);
     private readonly router = inject(Router);
 
     protected readonly formOpen = signal(false);
@@ -73,12 +87,19 @@ export class SiteDetailPageComponent {
     protected readonly dayFormOpen = signal(false);
     /** The day being edited; null = a new one. */
     protected readonly editingDay = signal<WorkDay | null>(null);
+    protected readonly paymentFormOpen = signal(false);
+    /** The payment being edited; null = a new one. */
+    protected readonly editingPayment = signal<Payment | null>(null);
 
     constructor() {
-        // Fetch the lazy work day form chunk when the browser is idle, so the first "+ Ден работа" opens quickly.
+        // Fetch the lazy form chunks when the browser is idle, so the first "+ Ден работа" / "+ Плащане" opens quickly.
         afterNextRender(() => {
-            const prefetch = () =>
+            const prefetch = () => {
                 void import('../../work-days/work-day-form/work-day-form.component').catch(() => undefined);
+                if (this.auth.isOwner()) {
+                    void import('../../payments/payment-form/payment-form.component').catch(() => undefined);
+                }
+            };
             if (typeof requestIdleCallback === 'function') {
                 requestIdleCallback(prefetch);
             } else {
@@ -92,8 +113,13 @@ export class SiteDetailPageComponent {
                 this.formOpen.set(false);
                 this.priceFormOpen.set(false);
                 this.dayFormOpen.set(false);
+                this.paymentFormOpen.set(false);
                 void this.store.loadOne(id);
                 void this.workDays.load(id);
+                if (this.auth.isOwner()) {
+                    void this.summaries.loadSite(id);
+                    void this.payments.load(id);
+                }
                 void this.prices.load(id);
                 // The price and work day forms offer services from the shared list.
                 void this.services.load();
@@ -194,9 +220,55 @@ export class SiteDetailPageComponent {
         }
     }
 
-    /** A new day makes a lead current, so the header is reloaded; the list too, quietly (nothing blinks). */
+    protected openPaymentForm(payment: Payment | null): void {
+        this.payments.clearErrors();
+        this.editingPayment.set(payment);
+        this.paymentFormOpen.set(true);
+    }
+
+    protected closePaymentForm(): void {
+        this.paymentFormOpen.set(false);
+    }
+
+    protected async savePayment(request: SavePaymentRequest): Promise<void> {
+        const editing = this.editingPayment();
+        const saved = editing
+            ? await this.payments.update(this.id(), editing.id, request)
+            : await this.payments.create(this.id(), request);
+        if (saved) {
+            this.paymentFormOpen.set(false);
+            this.reloadAfterPaymentChange();
+        }
+    }
+
+    protected async removePayment(): Promise<void> {
+        const editing = this.editingPayment();
+        if (editing && (await this.payments.remove(this.id(), editing.id))) {
+            this.paymentFormOpen.set(false);
+            this.reloadAfterPaymentChange();
+        }
+    }
+
+    /** One open item reads „1 позиция …“, more „N позиции …“. */
+    protected openLabel(count: number): string {
+        return `${count} ${count === 1 ? 'позиция' : 'позиции'} без цена / за уточняване`;
+    }
+
+    /**
+     * A new day makes a lead current, so the header is reloaded; the list too, quietly (nothing blinks).
+     * Owner: the money changes with the days, so the summary is reloaded as well.
+     */
     private reloadAfterDayChange(): void {
         void this.store.refreshOne(this.id());
         void this.workDays.load(this.id());
+        if (this.auth.isOwner()) {
+            void this.summaries.refreshSite(this.id());
+        }
+    }
+
+    /** Quietly reloads the summary and the payments (Owner only: the payments section is Owner only). */
+    private reloadAfterPaymentChange(): void {
+        void this.summaries.refreshSite(this.id());
+        void this.payments.load(this.id());
     }
 }

@@ -29,17 +29,30 @@ const SAVE_FALLBACK_ERROR = 'Грешка при записа';
 const LOAD_LIST_FALLBACK_ERROR = 'Грешка при зареждане на обектите';
 const LOAD_ONE_FALLBACK_ERROR = 'Грешка при зареждане на обекта';
 
-/** Same order as GET /api/sites: current, leads, done; then by name. */
+/** Same order as GET /api/sites: current, leads, done. */
 const STATUS_ORDER: Record<SiteStatus, number> = { Active: 0, Lead: 1, Done: 2 };
 
+/** Current sites by last work day (newest first, sites without days after them), then everyone by name. */
 function sortLikeApi(list: SiteListItem[]): SiteListItem[] {
+    const byLastWork = (a: SiteListItem, b: SiteListItem) =>
+        a.status === 'Active' ? (b.lastWorkDate ?? '').localeCompare(a.lastWorkDate ?? '') : 0;
     return [...list].sort(
-        (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.name.localeCompare(b.name, 'bg'),
+        (a, b) =>
+            STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || byLastWork(a, b) || a.name.localeCompare(b.name, 'bg'),
     );
 }
 
-function toListItem({ id, name, status, companyName, endCustomer, address }: Site): SiteListItem {
-    return { id, name, status, companyName, endCustomer, address };
+/** The site response has no last work day, so the list item keeps the one it had (null for a new site). */
+function toListItem(
+    { id, name, status, companyName, endCustomer, address }: Site,
+    lastWorkDate: string | null = null,
+): SiteListItem {
+    return { id, name, status, companyName, endCustomer, address, lastWorkDate };
+}
+
+/** Replaces the list item of a saved site, keeping its last work day. */
+function replaceItem(list: SiteListItem[], site: Site): SiteListItem[] {
+    return sortLikeApi(list.map((item) => (item.id === site.id ? toListItem(site, item.lastWorkDate) : item)));
 }
 
 function camelCase(key: string): string {
@@ -112,7 +125,7 @@ export const SitesStore = signalStore(
                 if (store.selected()?.id === id) {
                     patchState(store, {
                         selected: site,
-                        list: sortLikeApi(store.list().map((item) => (item.id === id ? toListItem(site) : item))),
+                        list: replaceItem(store.list(), site),
                     });
                 }
             } catch {
@@ -144,7 +157,7 @@ export const SitesStore = signalStore(
                 const site = await firstValueFrom(service.update(id, request));
                 patchState(store, {
                     selected: site,
-                    list: sortLikeApi(store.list().map((item) => (item.id === id ? toListItem(site) : item))),
+                    list: replaceItem(store.list(), site),
                     saving: false,
                 });
                 return site;

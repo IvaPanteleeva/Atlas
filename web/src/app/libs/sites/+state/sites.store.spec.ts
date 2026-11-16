@@ -32,6 +32,7 @@ function item(overrides: Partial<SiteListItem> = {}): SiteListItem {
         companyName: null,
         endCustomer: null,
         address: null,
+        lastWorkDate: null,
         ...overrides,
     };
 }
@@ -199,6 +200,27 @@ describe('SitesStore', () => {
         expect(names()).toEqual(['Алфа', 'Бета', 'Вега', 'Гама']);
         expect(store.list()[1]).toEqual(item({ id: 'b', name: 'Бета', status: 'Lead', endCustomer: 'Професорът' }));
         expect(store.saving()).toBe(false);
+    });
+
+    it('create and update keep the API order: current by last work day (newest first), then leads and done by name', async () => {
+        await loaded([
+            item({ id: 'n', name: 'Ново', status: 'Active', lastWorkDate: '2026-11-15' }),
+            item({ id: 'a', name: 'Алфа', status: 'Active', lastWorkDate: '2026-11-02' }),
+            item({ id: 'z', name: 'Без дни', status: 'Active', lastWorkDate: null }),
+            item({ id: 'v', name: 'Вега', status: 'Lead' }),
+            item({ id: 'd', name: 'Гама', status: 'Done', lastWorkDate: '2026-11-16' }),
+        ]);
+        await store.loadOne('a');
+        fake.updateResult = of(site({ id: 'a', name: 'Алфа 2', status: 'Active' }));
+
+        await store.update('a', { ...request, name: 'Алфа 2', status: 'Active' });
+        fake.createResult = of(site({ id: 'b', name: 'Бета', status: 'Active' }));
+        await store.create({ ...request, name: 'Бета', status: 'Active' });
+
+        expect(names()).toEqual(['Ново', 'Алфа 2', 'Без дни', 'Бета', 'Вега', 'Гама']);
+        // The site response has no last work day: the list keeps the one it had.
+        expect(store.list()[1].lastWorkDate).toBe('2026-11-02');
+        expect(store.list()[3].lastWorkDate).toBeNull();
     });
 
     it('create 400 keeps the first message per field (camelCase) and returns null', async () => {

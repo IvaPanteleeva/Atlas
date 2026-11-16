@@ -31,8 +31,17 @@ export class FakeSitesService {
             companyName: 'Женистрой',
             endCustomer: null,
             address: 'ул. Шипка 5',
+            lastWorkDate: '2026-11-14',
         },
-        { id: 's2', name: 'Професора', status: 'Lead', companyName: null, endCustomer: 'Професорът', address: null },
+        {
+            id: 's2',
+            name: 'Професора',
+            status: 'Lead',
+            companyName: null,
+            endCustomer: 'Професорът',
+            address: null,
+            lastWorkDate: null,
+        },
     ]);
     getResult: Observable<Site> = of(testSite());
     createResult: Observable<Site> = of(

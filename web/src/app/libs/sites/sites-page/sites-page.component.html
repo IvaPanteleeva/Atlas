@@ -10,10 +10,42 @@
     <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
 }
 
+@if (auth.isOwner()) {
+    @if (summaries.totals(); as totals) {
+        <!-- „Дължат ни“ is never negative (overpaid sites are shown apart), so it never reads „Надплатено“. -->
+        <atlas-ledger
+            class="ledger"
+            [earned]="totals.earned"
+            [paid]="totals.paid"
+            [remaining]="totals.owed"
+            lastLabel="Дължат ни"
+        />
+        @if (totals.overpaid > 0 || totals.openCount > 0) {
+            <p class="pills">
+                @if (totals.overpaid > 0) {
+                    <span class="pill good">
+                        Надплатено {{ totals.overpaid | eur }} по {{ totals.overpaidSiteCount }}
+                        {{ totals.overpaidSiteCount === 1 ? 'обект' : 'обекта' }}
+                    </span>
+                }
+                @if (totals.openCount > 0) {
+                    <span class="pill q">{{ totals.openCount }} без цена / за уточняване</span>
+                }
+            </p>
+        }
+    } @else if (summaries.error(); as message) {
+        <nz-alert class="error" nzType="warning" [nzMessage]="message" nzShowIcon />
+    }
+}
+
 @if (store.loading() && !store.list().length) {
     <p class="note">Зареждане…</p>
 } @else {
-    <atlas-site-list [sites]="store.list()" (open)="openSite($event)" />
+    <atlas-site-list
+        [sites]="store.list()"
+        [summaries]="auth.isOwner() ? summaries.bySite() : null"
+        (open)="openSite($event)"
+    />
 }
 
 <nz-modal

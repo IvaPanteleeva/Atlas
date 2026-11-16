@@ -1,0 +1,67 @@
+:host {
+    display: block;
+}
+
+// Same panel as the other lists: surface, 1px line, radius 8px.
+.payments,
+.empty {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.payments {
+    padding: 0;
+    list-style: none;
+    overflow: hidden;
+
+    li + li {
+        border-top: 1px solid var(--line);
+    }
+}
+
+// Row: date · note (or „Плащане“) · amount.
+.payment {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 16px 12px 12px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--sunk);
+    }
+}
+
+.date {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.label {
+    overflow-wrap: break-word;
+}
+
+.label--plain {
+    color: var(--muted);
+}
+
+.amount {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.empty {
+    padding: 16px;
+    color: var(--muted);
+}

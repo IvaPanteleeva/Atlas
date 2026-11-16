@@ -1,0 +1,72 @@
+:host {
+    display: block;
+}
+
+// Prototype .ledger: three equal columns in one panel, separated by a left border.
+.ledger {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.ledger__col {
+    min-width: 0;
+    padding: 10px 12px;
+
+    & + & {
+        border-left: 1px solid var(--line);
+    }
+}
+
+.ledger__label {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ledger__value {
+    margin: 2px 0 0;
+    overflow: hidden;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ledger__col--warn .ledger__value {
+    color: var(--warn);
+}
+
+.ledger__col--good .ledger__value {
+    color: var(--good);
+}
+
+// Phone: three amounts such as "1 157,89 €" side by side in 375px, so less padding and slightly tighter digits.
+@media (max-width: 519.98px) {
+    .ledger__col {
+        padding: 8px 6px 8px 8px;
+    }
+
+    .ledger__label {
+        letter-spacing: 0.08em;
+    }
+
+    .ledger__value {
+        font-size: 17px;
+        letter-spacing: -0.03em;
+    }
+
+    // Up to "999 999,99 €" in a 375px column; ellipsis stays as the last resort.
+    .ledger--long .ledger__value {
+        font-size: 14px;
+    }
+}

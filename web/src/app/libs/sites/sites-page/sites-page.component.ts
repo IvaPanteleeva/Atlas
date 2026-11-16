@@ -7,15 +7,30 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { AuthStore } from '../../auth/+state/auth.store';
 import { CompaniesStore } from '../../companies/+state/companies.store';
 import { Company } from '../../companies/company.model';
+import { EurPipe } from '../../shared/eur.pipe';
+import { LedgerComponent } from '../../shared/ledger/ledger.component';
+import { SummariesStore } from '../../summaries/+state/summaries.store';
 import { SitesStore } from '../+state/sites.store';
 import { SaveSiteRequest } from '../site.model';
 import { SiteFormComponent } from '../site-form/site-form.component';
 import { SiteListComponent } from '../site-list/site-list.component';
 
-/** Smart page "Обекти": the list and the "Нов обект" form. Only this component talks to the stores. */
+/**
+ * Smart page "Обекти": the list and the "Нов обект" form. Only this component talks to the stores.
+ * Owner also sees the money: the totals above the list and the amounts on each row (Crew gets 403 there).
+ */
 @Component({
     selector: 'atlas-sites-page',
-    imports: [NzAlertModule, NzButtonModule, NzIconModule, NzModalModule, SiteListComponent, SiteFormComponent],
+    imports: [
+        NzAlertModule,
+        NzButtonModule,
+        NzIconModule,
+        NzModalModule,
+        EurPipe,
+        LedgerComponent,
+        SiteListComponent,
+        SiteFormComponent,
+    ],
     templateUrl: './sites-page.component.html',
     styleUrl: './sites-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +39,7 @@ export class SitesPageComponent {
     protected readonly store = inject(SitesStore);
     protected readonly companies = inject(CompaniesStore);
     protected readonly auth = inject(AuthStore);
+    protected readonly summaries = inject(SummariesStore);
     private readonly router = inject(Router);
 
     protected readonly formOpen = signal(false);
@@ -31,6 +47,9 @@ export class SitesPageComponent {
 
     constructor() {
         void this.store.load();
+        if (this.auth.isOwner()) {
+            void this.summaries.loadAll();
+        }
     }
 
     protected openSite(id: string): void {

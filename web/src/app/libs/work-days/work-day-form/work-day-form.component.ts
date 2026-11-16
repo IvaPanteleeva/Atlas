@@ -36,6 +36,7 @@ import { MONEY_MAX, MONEY_MIN, Service } from '../../services/service.model';
 import { FieldErrors } from '../../shared/api-errors';
 import { DATE_PICKER_PROVIDERS } from '../../shared/date-adapter';
 import { EurPipe } from '../../shared/eur.pipe';
+import { fromIsoDate, isAfterToday, toIsoDate } from '../../shared/iso-date';
 import { DecimalInputDirective } from '../../shared/decimal-input';
 import { resolveRate } from '../../shared/price-resolver';
 import { Unit, UNIT_LABELS, UNIT_OPTIONS } from '../../shared/units';
@@ -71,17 +72,6 @@ function positive(control: AbstractControl<number | null>): ValidationErrors | n
 function orNull(value: string): string | null {
     const trimmed = value.trim();
     return trimmed ? trimmed : null;
-}
-
-/** Local date as yyyy-MM-dd (toISOString would be UTC and can be the previous day). */
-function toIsoDate(date: Date): string {
-    const pad = (value: number) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function fromIsoDate(value: string): Date {
-    const [year, month, day] = value.split('-').map(Number);
-    return new Date(year, month - 1, day);
 }
 
 /** Marks every control so its error shows, also untouched ones. */
@@ -157,7 +147,7 @@ export class WorkDayFormComponent {
     protected readonly unitOptions = UNIT_OPTIONS;
     protected readonly freeText = FREE_TEXT;
     /** Days after today cannot be picked (the server refuses them too). */
-    protected readonly disabledDate = (current: Date): boolean => toIsoDate(current) > toIsoDate(new Date());
+    protected readonly disabledDate = isAfterToday;
 
     private readonly fb = inject(NonNullableFormBuilder);
     private readonly destroyRef = inject(DestroyRef);

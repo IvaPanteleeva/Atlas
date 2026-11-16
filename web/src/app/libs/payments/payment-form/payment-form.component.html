@@ -1,0 +1,103 @@
+<form nz-form nzLayout="vertical" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <ng-template #amountTip let-control>
+        @if (control.hasError('number')) {
+            Въведи число
+        } @else if (control.hasError('required')) {
+            Въведи сума
+        } @else if (control.hasError('min')) {
+            Сумата трябва да е по-голяма от 0
+        } @else if (control.hasError('max')) {
+            Сумата може да е най-много 1 000 000 €
+        }
+    </ng-template>
+    <ng-template #noteTip let-control>
+        @if (control.hasError('maxlength')) {
+            Най-много {{ control.getError('maxlength').requiredLength }} знака
+        }
+    </ng-template>
+
+    <nz-form-item>
+        <nz-form-label nzFor="pay-amount" nzRequired>Сума</nz-form-label>
+        <nz-form-control [nzErrorTip]="amountTip">
+            <nz-input-wrapper nzSuffix="€">
+                <input
+                    nz-input
+                    atlasDecimalInput
+                    id="pay-amount"
+                    formControlName="amount"
+                    [decimals]="2"
+                    [fixedDecimals]="true"
+                />
+            </nz-input-wrapper>
+            @if (serverError('amount'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="pay-date" nzRequired>Дата</nz-form-label>
+        <nz-form-control nzErrorTip="Избери дата">
+            <nz-date-picker
+                formControlName="date"
+                nzId="pay-date"
+                nzFormat="dd.MM.yyyy"
+                nzInputReadOnly
+                [nzAllowClear]="false"
+                [nzDisabledDate]="disabledDate"
+            />
+            @if (serverError('date'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+        <nz-form-label nzFor="pay-note">Бележка</nz-form-label>
+        <nz-form-control [nzErrorTip]="noteTip">
+            <input
+                nz-input
+                id="pay-note"
+                formControlName="note"
+                placeholder="напр. аванс, в брой"
+                autocomplete="off"
+                [maxLength]="limits.note"
+            />
+            @if (serverError('note'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    @if (error() || otherErrors().length) {
+        <nz-alert class="error" nzType="error" nzShowIcon role="alert" [nzMessage]="alertText" />
+        <ng-template #alertText>
+            @if (error(); as message) {
+                <div>{{ message }}</div>
+            }
+            @for (message of otherErrors(); track $index) {
+                <div>{{ message }}</div>
+            }
+        </ng-template>
+    }
+
+    <div class="footer">
+        @if (payment()) {
+            <button
+                nz-button
+                nzDanger
+                type="button"
+                class="footer__delete"
+                [nzType]="confirmingDelete() ? 'primary' : 'default'"
+                [disabled]="saving()"
+                (click)="requestDelete()"
+            >
+                {{ confirmingDelete() ? 'Потвърди изтриване' : 'Изтрий' }}
+            </button>
+        }
+        <div class="footer__actions">
+            <button nz-button type="button" [disabled]="saving()" (click)="cancel.emit()">Отказ</button>
+            <button nz-button nzType="primary" type="submit" [nzLoading]="saving()">Запази</button>
+        </div>
+    </div>
+</form>

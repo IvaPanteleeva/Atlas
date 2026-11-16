@@ -1,15 +1,39 @@
-@if (sites().length) {
+@if (rows().length) {
     <ul class="sites">
-        @for (site of sites(); track site.id) {
+        @for (row of rows(); track row.site.id) {
             <li>
-                <button type="button" class="site" (click)="open.emit(site.id)">
+                <button type="button" class="site" (click)="open.emit(row.site.id)">
                     <span class="site__text">
-                        <span class="name">{{ site.name }}</span>
-                        @if (meta(site); as text) {
-                            <span class="meta">{{ text }}</span>
+                        <span class="name">{{ row.site.name }}</span>
+                        @if (row.meta) {
+                            <span class="meta">{{ row.meta }}</span>
                         }
                     </span>
-                    <atlas-site-status-tag [status]="site.status" />
+                    <span class="site__side">
+                        <atlas-site-status-tag [status]="row.site.status" />
+                        @if (row.money; as money) {
+                            <span class="money">
+                                <span class="money__earned num">{{ money.earned | eur }}</span>
+                                @if (row.rest; as rest) {
+                                    @switch (rest.kind) {
+                                        @case ('owed') {
+                                            <span class="money__rest money__rest--warn"
+                                                >остават {{ rest.amount | eur }}</span
+                                            >
+                                        }
+                                        @case ('paid') {
+                                            <span class="money__rest money__rest--good">изплатено</span>
+                                        }
+                                        @case ('overpaid') {
+                                            <span class="money__rest money__rest--good"
+                                                >надплатено {{ rest.amount | eur }}</span
+                                            >
+                                        }
+                                    }
+                                }
+                            </span>
+                        }
+                    </span>
                 </button>
             </li>
         }

@@ -61,6 +61,39 @@
     overflow-wrap: anywhere;
 }
 
+.site__side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+// Owner only: what was earned, and under it what is left (prototype list row, right side).
+.money {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.money__earned {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.money__rest {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.money__rest--warn {
+    color: var(--warn);
+}
+
+.money__rest--good {
+    color: var(--good);
+}
+
 .empty {
     padding: 16px;
     color: var(--muted);

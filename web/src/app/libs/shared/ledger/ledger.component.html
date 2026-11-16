@@ -1,0 +1,14 @@
+<dl class="ledger" [class.ledger--long]="long()">
+    <div class="ledger__col">
+        <dt class="ledger__label">Изработено</dt>
+        <dd class="ledger__value num">{{ earned() | eur }}</dd>
+    </div>
+    <div class="ledger__col">
+        <dt class="ledger__label">Платено</dt>
+        <dd class="ledger__value num">{{ paid() | eur }}</dd>
+    </div>
+    <div class="ledger__col" [class.ledger__col--warn]="owed()" [class.ledger__col--good]="!owed()">
+        <dt class="ledger__label">{{ restLabel() }}</dt>
+        <dd class="ledger__value num">{{ restAmount() | eur }}</dd>
+    </div>
+</dl>

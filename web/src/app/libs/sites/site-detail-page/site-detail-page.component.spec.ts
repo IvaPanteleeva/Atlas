@@ -12,9 +12,13 @@ import { AuthService } from '../../auth/auth.service';
 import { CompaniesService } from '../../companies/companies.service';
 import { FakeServicesService } from '../../services/testing/fake-services.service';
 import { ServicesService } from '../../services/services.service';
+import { PaymentsService } from '../../payments/payments.service';
+import { FakePaymentsService, testPayment } from '../../payments/testing/fake-payments.service';
 import { APP_ICONS } from '../../shared/icons';
 import { SitePricesService } from '../../site-prices/site-prices.service';
 import { FakeSitePricesService, testSitePrice } from '../../site-prices/testing/fake-site-prices.service';
+import { SummariesService } from '../../summaries/summaries.service';
+import { FakeSummariesService, testSiteSummary } from '../../summaries/testing/fake-summaries.service';
 import { SitesService } from '../sites.service';
 import { FakeSitesService, httpError, testSite } from '../testing/fake-sites.service';
 import { FakeWorkDaysService, testWorkDay } from '../../work-days/testing/fake-work-days.service';
@@ -25,6 +29,8 @@ describe('SiteDetailPageComponent', () => {
     let prices: FakeSitePricesService;
     let services: FakeServicesService;
     let workDays: FakeWorkDaysService;
+    let payments: FakePaymentsService;
+    let summaries: FakeSummariesService;
     let role: Role;
 
     beforeAll(() => {
@@ -36,6 +42,8 @@ describe('SiteDetailPageComponent', () => {
         prices = new FakeSitePricesService();
         services = new FakeServicesService();
         workDays = new FakeWorkDaysService();
+        payments = new FakePaymentsService();
+        summaries = new FakeSummariesService();
         role = 'Owner';
         TestBed.configureTestingModule({
             providers: [
@@ -52,6 +60,8 @@ describe('SiteDetailPageComponent', () => {
                 { provide: SitePricesService, useValue: prices },
                 { provide: ServicesService, useValue: services },
                 { provide: WorkDaysService, useValue: workDays },
+                { provide: PaymentsService, useValue: payments },
+                { provide: SummariesService, useValue: summaries },
             ],
         });
     });
@@ -384,6 +394,51 @@ describe('SiteDetailPageComponent', () => {
             expect(workDays.calls.at(-1)).toBe('list s1');
         });
 
+        it('the money is reloaded quietly after a day is saved or deleted', async () => {
+            workDays.listResult = of([testWorkDay({ id: 'd1' })]);
+            const { harness, page } = await render();
+            expect(summaries.calls).toEqual(['site s1']);
+            summaries.siteResult = of(testSiteSummary({ earned: 1239.14, remaining: 739.14 }));
+
+            button(section(page), 'Редакция')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForDayForm();
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+
+            await vi.waitFor(() => expect(summaries.calls).toEqual(['site s1', 'site s1']));
+            await harness.fixture.whenStable();
+            expect(page.querySelector('atlas-ledger .ledger__value')?.textContent?.trim()).toBe('1\u00A0239,14\u00A0€');
+            await vi.waitFor(() => expect(dayForm()).toBeNull());
+
+            button(section(page), 'Редакция')!.click();
+            await harness.fixture.whenStable();
+            const again = await waitForDayForm();
+            button(again, 'Изтрий')!.click();
+            await harness.fixture.whenStable();
+            button(again, 'Потвърди изтриване')!.click();
+            await harness.fixture.whenStable();
+
+            await vi.waitFor(() => expect(summaries.calls).toEqual(['site s1', 'site s1', 'site s1']));
+        });
+
+        it('Crew saves a day without any money requests', async () => {
+            role = 'Crew';
+            workDays.listResult = of([testWorkDay({ id: 'd1' })]);
+            const { harness, page } = await render();
+
+            button(section(page), 'Редакция')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForDayForm();
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+            await vi.waitFor(() => expect(dayForm()).toBeNull());
+
+            expect(workDays.calls.some((call) => call.startsWith('update s1 d1'))).toBe(true);
+            expect(summaries.calls).toEqual([]);
+            expect(payments.calls).toEqual([]);
+        });
+
         it('Owner deletes a day after confirming', async () => {
             workDays.listResult = of([testWorkDay({ id: 'd1' })]);
             const { harness, page } = await render();
@@ -401,6 +456,176 @@ describe('SiteDetailPageComponent', () => {
             await vi.waitFor(() => expect(dayForm()).toBeNull());
             await harness.fixture.whenStable();
             expect(section(page).querySelectorAll('.day').length).toBe(0);
+        });
+    });
+
+    describe('money (Owner)', () => {
+        const text = (node: Element | null | undefined) => node?.textContent?.replace(/\s+/g, ' ').trim();
+        const ledger = (page: HTMLElement) => page.querySelector<HTMLElement>('atlas-ledger');
+        const section = (page: HTMLElement) => page.querySelector<HTMLElement>('section.payments');
+        const paymentForm = () => document.querySelector<HTMLElement>('.atlas-sheet atlas-payment-form');
+
+        async function waitForPaymentForm() {
+            return vi.waitFor(() => {
+                const form = paymentForm();
+                expect(form).toBeTruthy();
+                return form!;
+            });
+        }
+
+        async function type(harness: RouterTestingHarness, input: HTMLInputElement, value: string) {
+            input.value = value;
+            input.dispatchEvent(new Event('input'));
+            await harness.fixture.whenStable();
+        }
+
+        it('Owner sees the ledger under the header, from the summary of the site', async () => {
+            const { page } = await render();
+
+            expect(summaries.calls).toEqual(['site s1']);
+            expect(Array.from(ledger(page)!.querySelectorAll('.ledger__label')).map(text)).toEqual([
+                'Изработено',
+                'Платено',
+                'Остатък',
+            ]);
+            expect(Array.from(ledger(page)!.querySelectorAll('.ledger__value')).map(text)).toEqual([
+                '1 157,89 €',
+                '500,00 €',
+                '657,89 €',
+            ]);
+            const header = page.querySelector('atlas-site-header')!;
+            expect(header.compareDocumentPosition(ledger(page)!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+            expect(ledger(page)!.compareDocumentPosition(page.querySelector('section.work-days')!)).toBe(
+                Node.DOCUMENT_POSITION_FOLLOWING,
+            );
+            expect(page.querySelector('.pill.q')).toBeNull();
+        });
+
+        it('shows „N позиции без цена / за уточняване“ when something is open', async () => {
+            summaries.siteResult = of(testSiteSummary({ openCount: 2 }));
+
+            const { page } = await render();
+
+            expect(text(page.querySelector('.pill.q'))).toBe('2 позиции без цена / за уточняване');
+        });
+
+        it('one open item reads „1 позиция …“', async () => {
+            summaries.siteResult = of(testSiteSummary({ openCount: 1 }));
+
+            const { page } = await render();
+
+            expect(text(page.querySelector('.pill.q'))).toBe('1 позиция без цена / за уточняване');
+        });
+
+        it('loads the payments and shows „Плащания“ below „Работни дни“ (above the prices)', async () => {
+            payments.listResult = of([
+                testPayment({ id: 'p2', date: '2026-11-14', note: null, amount: 200 }),
+                testPayment({ id: 'p1', date: '2026-11-10', note: 'аванс', amount: 300 }),
+            ]);
+
+            const { page } = await render();
+
+            expect(payments.calls).toEqual(['list s1']);
+            const sections = Array.from(page.querySelectorAll('section')).map((s) => s.className);
+            expect(sections).toEqual(['work-days', 'payments', 'prices']);
+            expect(text(section(page)!.querySelector('h2'))).toBe('Плащания 2');
+            expect(button(section(page)!, 'Плащане')).toBeDefined();
+            expect(Array.from(section(page)!.querySelectorAll('button.payment .label')).map(text)).toEqual([
+                'Плащане',
+                'аванс',
+            ]);
+        });
+
+        it('shows „Няма плащания.“ when there are none', async () => {
+            const { page } = await render();
+
+            expect(text(section(page))).toContain('Няма плащания.');
+        });
+
+        it('Crew sees neither the ledger nor the payments, and no money is requested', async () => {
+            role = 'Crew';
+            summaries.siteResult = of(testSiteSummary({ openCount: 2 }));
+
+            const { page } = await render();
+
+            expect(ledger(page)).toBeNull();
+            expect(section(page)).toBeNull();
+            expect(page.querySelector('.pill.q')).toBeNull();
+            expect(summaries.calls).toEqual([]);
+            expect(payments.calls).toEqual([]);
+            expect(page.querySelector('section.work-days')).not.toBeNull();
+        });
+
+        it('„+ Плащане“ saves a payment, lists it and reloads the money quietly', async () => {
+            const { harness, page } = await render();
+            summaries.siteResult = of(testSiteSummary({ paid: 700, remaining: 457.89 }));
+            payments.listResult = of([testPayment({ id: 'new', amount: 200 })]);
+
+            button(section(page)!, 'Плащане')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForPaymentForm();
+            expect(document.querySelector('.atlas-sheet .ant-modal-title')?.textContent?.trim()).toBe('Ново плащане');
+            await type(harness, form.querySelector<HTMLInputElement>('#pay-amount')!, '200');
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+
+            expect(payments.calls.some((call) => /^create s1 \d{4}-\d{2}-\d{2} 200$/.test(call))).toBe(true);
+            await vi.waitFor(() => expect(paymentForm()).toBeNull());
+            await vi.waitFor(() => expect(summaries.calls).toEqual(['site s1', 'site s1']));
+            await harness.fixture.whenStable();
+            expect(payments.calls.at(-1)).toBe('list s1');
+            expect(text(ledger(page)!.querySelectorAll('.ledger__value')[1])).toBe('700,00 €');
+            expect(section(page)!.querySelectorAll('button.payment').length).toBe(1);
+        });
+
+        it('tapping a payment edits it; delete needs a confirmation and reloads the money', async () => {
+            payments.listResult = of([testPayment({ id: 'p1', amount: 500 })]);
+            const { harness, page } = await render();
+
+            section(page)!.querySelector<HTMLButtonElement>('button.payment')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForPaymentForm();
+            expect(form.querySelector<HTMLInputElement>('#pay-amount')!.value).toBe('500,00');
+            await type(harness, form.querySelector<HTMLInputElement>('#pay-amount')!, '650');
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+            expect(payments.lastRequest).toEqual({ date: '2026-11-16', amount: 650, note: 'аванс' });
+            await vi.waitFor(() => expect(paymentForm()).toBeNull());
+            await vi.waitFor(() => expect(summaries.calls).toEqual(['site s1', 'site s1']));
+
+            payments.listResult = of([]);
+            section(page)!.querySelector<HTMLButtonElement>('button.payment')!.click();
+            await harness.fixture.whenStable();
+            const again = await waitForPaymentForm();
+            button(again, 'Изтрий')!.click();
+            await harness.fixture.whenStable();
+            expect(payments.calls).not.toContain('remove s1 p1');
+            button(again, 'Потвърди изтриване')!.click();
+            await harness.fixture.whenStable();
+
+            expect(payments.calls).toContain('remove s1 p1');
+            await vi.waitFor(() => expect(paymentForm()).toBeNull());
+            await vi.waitFor(() => expect(summaries.calls).toEqual(['site s1', 'site s1', 'site s1']));
+            await harness.fixture.whenStable();
+            expect(text(section(page))).toContain('Няма плащания.');
+        });
+
+        it('a 400 keeps the payment form open with the message under the field', async () => {
+            payments.createResult = httpError(400, { errors: { Date: ['Датата не може да е в бъдещето'] } });
+            const { harness, page } = await render();
+
+            button(section(page)!, 'Плащане')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitForPaymentForm();
+            await type(harness, form.querySelector<HTMLInputElement>('#pay-amount')!, '200');
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+
+            expect(paymentForm()).not.toBeNull();
+            expect(text(form.querySelector('#pay-date')!.closest('nz-form-item'))).toContain(
+                'Датата не може да е в бъдещето',
+            );
+            expect(summaries.calls).toEqual(['site s1']);
         });
     });
 });

@@ -14,6 +14,26 @@
     }
 }
 
+// Owner: the money of the site under the header.
+.ledger {
+    margin-top: 14px;
+}
+
+.open {
+    margin: 8px 0 0;
+}
+
+.pill.q {
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
 .edit {
     margin-top: 14px;
 }
@@ -30,6 +50,7 @@
 
 // Sections: prototype h2 (small uppercase section title) with the action on the right.
 .work-days,
+.payments,
 .prices {
     margin-top: 28px;
 }
@@ -70,6 +91,10 @@
     flex-direction: column;
     gap: 12px;
     min-height: 240px;
+}
+
+.day-form-loading--short {
+    min-height: 160px;
 }
 
 .skeleton {

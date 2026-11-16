@@ -10,6 +10,18 @@
     </div>
 } @else if (store.selected(); as site) {
     <atlas-site-header [site]="site" />
+    @if (auth.isOwner() && summaries.siteId() === site.id) {
+        @if (summaries.site(); as money) {
+            <atlas-ledger class="ledger" [earned]="money.earned" [paid]="money.paid" [remaining]="money.remaining" />
+            @if (money.openCount > 0) {
+                <p class="open">
+                    <span class="pill q">{{ openLabel(money.openCount) }}</span>
+                </p>
+            }
+        } @else if (summaries.error(); as message) {
+            <nz-alert class="ledger" nzType="warning" [nzMessage]="message" nzShowIcon />
+        }
+    }
     <button nz-button nzSize="small" type="button" class="edit" (click)="openForm()">Данни за обекта</button>
 
     <section class="work-days" aria-labelledby="work-days-title">
@@ -31,6 +43,28 @@
             <atlas-work-day-list [days]="workDays.days()" (edit)="openDayForm($event)" />
         }
     </section>
+
+    @if (auth.isOwner()) {
+        <section class="payments" aria-labelledby="payments-title">
+            <div class="sec-head">
+                <h2 id="payments-title">
+                    Плащания <span class="count num">{{ payments.payments().length }}</span>
+                </h2>
+                <button nz-button nzType="primary" nzSize="small" type="button" (click)="openPaymentForm(null)">
+                    <nz-icon nzType="plus" nzTheme="outline" aria-hidden="true" />
+                    Плащане
+                </button>
+            </div>
+            @if (!paymentFormOpen() && payments.error(); as message) {
+                <nz-alert class="section-error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+            }
+            @if (payments.loading() && !payments.payments().length) {
+                <p class="note">Зареждане…</p>
+            } @else {
+                <atlas-payment-list [payments]="payments.payments()" (edit)="openPaymentForm($event)" />
+            }
+        </section>
+    }
 
     <section class="prices" aria-labelledby="prices-title">
         <div class="sec-head">
@@ -119,6 +153,44 @@
                     <span class="skeleton"></span>
                     <span class="skeleton"></span>
                     <span class="skeleton skeleton--card"></span>
+                </div>
+            </ng-template>
+        </ng-container>
+    </nz-modal>
+
+    <!-- The payment form is loaded lazily when the modal opens (Owner only). -->
+    <nz-modal
+        [nzVisible]="paymentFormOpen()"
+        [nzTitle]="editingPayment() ? 'Плащане' : 'Ново плащане'"
+        [nzFooter]="null"
+        nzWrapClassName="atlas-sheet"
+        nzCentered
+        [nzWidth]="480"
+        [nzMaskClosable]="false"
+        (nzOnCancel)="closePaymentForm()"
+    >
+        <ng-container *nzModalContent>
+            @defer (on immediate) {
+                <atlas-payment-form
+                    [payment]="editingPayment()"
+                    [saving]="payments.saving()"
+                    [error]="payments.error()"
+                    [fieldErrors]="payments.fieldErrors()"
+                    (save)="savePayment($event)"
+                    (delete)="removePayment()"
+                    (cancel)="closePaymentForm()"
+                />
+            } @loading {
+                <ng-container [ngTemplateOutlet]="paymentFormLoading" />
+            } @placeholder {
+                <ng-container [ngTemplateOutlet]="paymentFormLoading" />
+            }
+            <ng-template #paymentFormLoading>
+                <div class="day-form-loading day-form-loading--short" role="status">
+                    <span class="note">Зареждане…</span>
+                    <span class="skeleton"></span>
+                    <span class="skeleton"></span>
+                    <span class="skeleton"></span>
                 </div>
             </ng-template>
         </ng-container>

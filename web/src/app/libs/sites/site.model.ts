@@ -17,10 +17,12 @@ export interface SiteListItem {
     companyName: string | null;
     endCustomer: string | null;
     address: string | null;
+    /** yyyy-MM-dd of the newest work day; null without work days. The server orders the list by it. */
+    lastWorkDate: string | null;
 }
 
-/** GET /api/sites/{id}, and the response of POST/PUT. */
-export interface Site extends SiteListItem {
+/** GET /api/sites/{id}, and the response of POST/PUT (no last work day: the list keeps its own). */
+export interface Site extends Omit<SiteListItem, 'lastWorkDate'> {
     companyId: string | null;
     mapUrl: string | null;
     note: string | null;

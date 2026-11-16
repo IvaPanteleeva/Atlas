@@ -1,0 +1,19 @@
+@if (rows().length) {
+    <ul class="payments">
+        @for (row of rows(); track row.payment.id) {
+            <li>
+                <button type="button" class="payment" (click)="edit.emit(row.payment)">
+                    <span class="date num">{{ row.day }}</span>
+                    @if (row.payment.note; as note) {
+                        <span class="label">{{ note }}</span>
+                    } @else {
+                        <span class="label label--plain">Плащане</span>
+                    }
+                    <span class="amount num">{{ row.payment.amount | eur }}</span>
+                </button>
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">Няма плащания.</p>
+}
