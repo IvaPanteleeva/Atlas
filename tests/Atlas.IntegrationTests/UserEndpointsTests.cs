@@ -144,14 +144,19 @@ public class UserEndpointsTests(AtlasApiFactory factory)
     }
 
     [Fact]
-    public async Task InvalidUserNameCharacters_Returns400_OnUserName()
+    public async Task InvalidUserNameCharacters_Returns400_WithBulgarianMessageOnUserName()
     {
         await factory.ResetDatabaseAsync();
         var owner = await factory.CreateOwnerClientAsync();
 
         var response = await owner.PostAsJsonAsync("/api/users", Request("иван петров", Roles.Crew));
 
-        await AssertFieldError(response, "userName");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal(
+            ["Потребителското име може да съдържа само букви (латиница или кирилица), цифри и - . _ @, без интервали."],
+            problem.Errors["userName"]);
     }
 
     [Fact]

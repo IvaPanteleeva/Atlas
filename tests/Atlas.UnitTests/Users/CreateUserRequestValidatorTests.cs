@@ -84,6 +84,22 @@ public class CreateUserRequestValidatorTests
             InvalidFields(new CreateUserRequest(new string('a', 51), "password", Roles.Crew, null)));
     }
 
+    [Theory]
+    [InlineData("иван петров")]
+    [InlineData("ivan/petrov")]
+    public void UserName_WithSpaceOrOtherSymbol_IsInvalid_WithBulgarianMessage(string userName)
+    {
+        var errors = new CreateUserRequestValidator()
+            .Validate(new CreateUserRequest(userName, "password", Roles.Crew, null))
+            .Errors;
+
+        var error = Assert.Single(errors);
+        Assert.Equal("UserName", error.PropertyName);
+        Assert.Equal(
+            "Потребителското име може да съдържа само букви (латиница или кирилица), цифри и - . _ @, без интервали.",
+            error.ErrorMessage);
+    }
+
     [Fact]
     public void CyrillicUserName_IsValid()
     {

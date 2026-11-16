@@ -1,5 +1,6 @@
 namespace Atlas.Infrastructure.Configuration;
 
+using Atlas.Application.Identity;
 using Microsoft.AspNetCore.Identity;
 
 // Password and lockout rules from CLAUDE.md "Вход и роли". Public so unit tests use the same rules.
@@ -20,16 +21,8 @@ public static class IdentityOptionsSetup
 
         // Login is by user name; e-mail is optional.
         options.User.RequireUniqueEmail = false;
-        options.User.AllowedUserNameCharacters = AllowedUserNameCharacters;
+
+        // Same set as CreateUserRequestValidator, so Identity's English message is never the first one seen.
+        options.User.AllowedUserNameCharacters = UserNameRules.AllowedCharacters;
     }
-
-    // Latin and Cyrillic letters (А-Я, а-я), digits and - . _ @. No spaces.
-    private static readonly string AllowedUserNameCharacters =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        + CharRange('А', 'Я')
-        + CharRange('а', 'я')
-        + "0123456789-._@";
-
-    private static string CharRange(char first, char last)
-        => new([.. Enumerable.Range(first, last - first + 1).Select(c => (char)c)]);
 }

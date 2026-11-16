@@ -4,8 +4,9 @@ using Atlas.Application.Identity;
 using Atlas.Application.Users;
 using FluentValidation;
 
-// Shape of the request only. Allowed user name characters, a taken name and an existing company
-// are checked by Identity and UserRepository, which see the database.
+// Shape of the request only. A taken name and an existing company are checked by UserRepository,
+// which sees the database. The user name characters are checked here too (same set as Identity),
+// so the message is in Bulgarian.
 public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 {
     public const int UserNameMaxLength = 50;
@@ -16,8 +17,11 @@ public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserReq
     public CreateUserRequestValidator()
     {
         this.RuleFor(r => r.UserName)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty()
             .MaximumLength(UserNameMaxLength)
+            .Must(UserNameRules.IsValid)
+            .WithMessage(UserNameRules.InvalidCharactersMessage)
             .WithName("Потребителско име");
 
         this.RuleFor(r => r.Password)
