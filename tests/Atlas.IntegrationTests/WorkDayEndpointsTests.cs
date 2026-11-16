@@ -17,7 +17,7 @@ namespace Atlas.IntegrationTests;
 [Collection("Api")]
 public class WorkDayEndpointsTests(AtlasApiFactory factory)
 {
-    private const string Password = "crew-password";
+    private const string Password = "user-password";
 
     private const string SiteNotFoundTitle = "Няма такъв обект.";
 
@@ -395,86 +395,77 @@ public class WorkDayEndpointsTests(AtlasApiFactory factory)
         Assert.Equal(1, day.OpenCount);
     }
 
+    // Round 28: the Manager sets prices like the Owner; the server takes them as sent (also null).
     [Fact]
-    public async Task Crew_NewItems_GetSitePrice_ThenDefault_ThenNull_IgnoringTheirRates()
+    public async Task Manager_TakesTheRatesAsSent_EvenAgainstTheSitePrice()
     {
         await factory.ResetDatabaseAsync();
         var owner = await factory.CreateOwnerClientAsync();
-        var crew = await CreateCrewClientAsync();
+        var manager = await CreateManagerClientAsync();
         var siteId = await CreateSiteAsync(owner, "Баня");
         var plaster = await CreateServiceAsync(owner, "Шпакловка", Unit.SquareMeter, 6m);
-        var paint = await CreateServiceAsync(owner, "Боя", Unit.SquareMeter, 4m);
-        var demolition = await CreateServiceAsync(owner, "Демонтаж", Unit.Day);
         await AddPriceAsync(owner, siteId, plaster.Id, 7m);
 
         var day = await CreateDayAsync(
-            crew,
+            manager,
             siteId,
-            Day(Today,
-            [
-                FromService(plaster, 2m, 999m),
-                FromService(paint, 2m, 999m),
-                FromService(demolition, 1m, 999m),
-                Free("Извозване", 1m, Unit.Piece, 999m),
-            ]));
+            Day(Today, [FromService(plaster, 2m, 8.25m), FromService(plaster, 1m, null), Free("Извозване", 1m, Unit.Piece, 30m)]));
 
-        Assert.Equal([7m, 4m, null, null], day.Items.Select(i => i.Rate));
-        Assert.Equal(22m, day.Total);
-        Assert.Equal(2, day.OpenCount);
+        Assert.Equal([8.25m, null, 30m], day.Items.Select(i => i.Rate));
+        Assert.Equal(46.5m, day.Total);
+        Assert.Equal(1, day.OpenCount);
     }
 
     [Fact]
-    public async Task Crew_Update_KeepsTheStoredRates_AndPricesTheNewItems()
+    public async Task Manager_Update_ChangesTheRatesOfKeptAndNewItems()
     {
         await factory.ResetDatabaseAsync();
         var owner = await factory.CreateOwnerClientAsync();
-        var crew = await CreateCrewClientAsync();
+        var manager = await CreateManagerClientAsync();
         var siteId = await CreateSiteAsync(owner, "Баня");
         var plaster = await CreateServiceAsync(owner, "Шпакловка", Unit.SquareMeter, 6m);
-        await AddPriceAsync(owner, siteId, plaster.Id, 7m);
 
-        // The Owner agreed a special price on this day; one item has no price yet.
         var day = await CreateDayAsync(
             owner,
             siteId,
             Day(Today, [FromService(plaster, 2m, 9.5m), Free("Демонтаж", 1m, Unit.Day, null)]));
 
-        var response = await crew.PutAsJsonAsync(
+        var response = await manager.PutAsJsonAsync(
             $"/api/sites/{siteId}/workdays/{day.Id}",
             Day(Today,
             [
-                FromService(plaster, 3m, 1m) with { Id = day.Items[0].Id, Description = "Шпакловка таван" },
+                FromService(plaster, 3m, 10m) with { Id = day.Items[0].Id, Description = "Шпакловка таван" },
                 Free("Демонтаж", 2m, Unit.Day, 150m) with { Id = day.Items[1].Id, NeedsReview = true },
-                FromService(plaster, 1m, 1m),
+                FromService(plaster, 1m, null),
             ]),
             Json);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var updated = await response.Content.ReadFromJsonAsync<WorkDayResponse>(Json);
         Assert.NotNull(updated);
+        Assert.Equal([day.Items[0].Id, day.Items[1].Id], updated.Items.Take(2).Select(i => i.Id));
         Assert.Equal(["Шпакловка таван", "Демонтаж", "Шпакловка"], updated.Items.Select(i => i.Description));
-        Assert.Equal([9.5m, null, 7m], updated.Items.Select(i => i.Rate));
-        Assert.Equal([3m, 2m, 1m], updated.Items.Select(i => i.Quantity));
+        Assert.Equal([10m, 150m, null], updated.Items.Select(i => i.Rate));
         Assert.Equal([false, true, false], updated.Items.Select(i => i.NeedsReview));
-        Assert.Equal(35.5m, updated.Total);
-        Assert.Equal(1, updated.OpenCount);
+        Assert.Equal(330m, updated.Total);
+        Assert.Equal(2, updated.OpenCount);
     }
 
-    // An item id that is not an item of this day is a new item: new id, price by the Crew rule,
+    // An item id that is not an item of this day is a new item: new id, the price as sent,
     // and the other day's item is not touched.
     [Fact]
     public async Task ItemIdOfAnotherDay_IsTreatedAsANewItem()
     {
         await factory.ResetDatabaseAsync();
         var owner = await factory.CreateOwnerClientAsync();
-        var crew = await CreateCrewClientAsync();
+        var manager = await CreateManagerClientAsync();
         var siteId = await CreateSiteAsync(owner, "Баня");
         var other = await CreateDayAsync(owner, siteId, Day(Today, Free("Плочки", 1m, Unit.Piece, 50m), "Друг"));
         var day = await CreateDayAsync(owner, siteId, Day(Today, Free("Боя", 1m, Unit.Piece, 3m)));
 
-        var response = await crew.PutAsJsonAsync(
+        var response = await manager.PutAsJsonAsync(
             $"/api/sites/{siteId}/workdays/{day.Id}",
-            Day(Today, Free("Плочки", 2m, Unit.Piece, 50m) with { Id = other.Items[0].Id }),
+            Day(Today, Free("Плочки", 2m, Unit.Piece, 45m) with { Id = other.Items[0].Id }),
             Json);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -482,7 +473,7 @@ public class WorkDayEndpointsTests(AtlasApiFactory factory)
         var item = Assert.Single(updated!.Items);
         Assert.NotEqual(other.Items[0].Id, item.Id);
         Assert.NotEqual(day.Items[0].Id, item.Id);
-        Assert.Null(item.Rate);
+        Assert.Equal(45m, item.Rate);
 
         var otherRead = await owner.GetFromJsonAsync<WorkDayResponse>($"/api/sites/{siteId}/workdays/{other.Id}", Json);
         AssertSameDay(other, otherRead!);
@@ -559,18 +550,18 @@ public class WorkDayEndpointsTests(AtlasApiFactory factory)
     }
 
     [Fact]
-    public async Task Crew_CanCreateReadUpdate_ButNotDelete()
+    public async Task Manager_CanCreateReadUpdate_ButNotDelete()
     {
         await factory.ResetDatabaseAsync();
         var owner = await factory.CreateOwnerClientAsync();
-        var crew = await CreateCrewClientAsync();
+        var manager = await CreateManagerClientAsync();
         var siteId = await CreateSiteAsync(owner, "Баня");
-        var day = await CreateDayAsync(crew, siteId, Day(Today, Free("Плочки")));
+        var day = await CreateDayAsync(manager, siteId, Day(Today, Free("Плочки")));
 
-        var list = await crew.GetAsync($"/api/sites/{siteId}/workdays");
-        var get = await crew.GetAsync($"/api/sites/{siteId}/workdays/{day.Id}");
-        var update = await crew.PutAsJsonAsync($"/api/sites/{siteId}/workdays/{day.Id}", Day(Today, Free("Боя")), Json);
-        var delete = await crew.DeleteAsync($"/api/sites/{siteId}/workdays/{day.Id}");
+        var list = await manager.GetAsync($"/api/sites/{siteId}/workdays");
+        var get = await manager.GetAsync($"/api/sites/{siteId}/workdays/{day.Id}");
+        var update = await manager.PutAsJsonAsync($"/api/sites/{siteId}/workdays/{day.Id}", Day(Today, Free("Боя")), Json);
+        var delete = await manager.DeleteAsync($"/api/sites/{siteId}/workdays/{day.Id}");
 
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
         Assert.Equal(HttpStatusCode.OK, get.StatusCode);
@@ -620,14 +611,15 @@ public class WorkDayEndpointsTests(AtlasApiFactory factory)
 
     private static void AssertSameDay(WorkDayResponse expected, WorkDayResponse actual)
     {
-        Assert.Equal(expected with { Items = [] }, actual with { Items = [] });
+        Assert.Equal(expected with { Items = [], Workers = [] }, actual with { Items = [], Workers = [] });
         Assert.Equal(expected.Items, actual.Items);
+        Assert.Equal(expected.Workers, actual.Workers);
     }
 
-    private async Task<HttpClient> CreateCrewClientAsync()
+    private async Task<HttpClient> CreateManagerClientAsync()
     {
-        await factory.CreateUserAsync("crew", Password, Roles.Crew);
-        return await factory.CreateLoggedInClientAsync("crew", Password);
+        await factory.CreateUserAsync("manager", Password, Roles.Manager);
+        return await factory.CreateLoggedInClientAsync("manager", Password);
     }
 
     private static async Task<WorkDayResponse> CreateDayAsync(HttpClient client, Guid siteId, SaveWorkDayRequest request)

@@ -75,28 +75,6 @@ public class WorkDayRulesTests
         Assert.Equal(expected, WorkDayRules.IsOpen(rate is null ? null : D(rate), needsReview));
     }
 
-    [Fact]
-    public void ResolveRate_Owner_TakesTheRequestedRate_EvenNull()
-    {
-        Assert.Equal(9m, WorkDayRules.ResolveRate(true, 9m, isExistingItem: true, storedRate: 5m, sitePrice: 7m, defaultRate: 6m));
-        Assert.Null(WorkDayRules.ResolveRate(true, null, isExistingItem: false, storedRate: null, sitePrice: 7m, defaultRate: 6m));
-    }
-
-    [Fact]
-    public void ResolveRate_Crew_ExistingItem_KeepsTheStoredRate()
-    {
-        Assert.Equal(5m, WorkDayRules.ResolveRate(false, 9m, isExistingItem: true, storedRate: 5m, sitePrice: 7m, defaultRate: 6m));
-        Assert.Null(WorkDayRules.ResolveRate(false, 9m, isExistingItem: true, storedRate: null, sitePrice: 7m, defaultRate: 6m));
-    }
-
-    [Fact]
-    public void ResolveRate_Crew_NewItem_SitePriceThenDefaultThenNull_IgnoringTheRequest()
-    {
-        Assert.Equal(7m, WorkDayRules.ResolveRate(false, 9m, isExistingItem: false, storedRate: null, sitePrice: 7m, defaultRate: 6m));
-        Assert.Equal(6m, WorkDayRules.ResolveRate(false, 9m, isExistingItem: false, storedRate: null, sitePrice: null, defaultRate: 6m));
-        Assert.Null(WorkDayRules.ResolveRate(false, 9m, isExistingItem: false, storedRate: null, sitePrice: null, defaultRate: null));
-    }
-
     [Theory]
     [InlineData(null, null)]
     [InlineData("", null)]

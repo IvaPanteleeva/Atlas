@@ -19,8 +19,8 @@ public class CreateUserRequestValidatorTests
 
     [Theory]
     [InlineData(Roles.Owner)]
-    [InlineData(Roles.Crew)]
-    public void OwnerOrCrew_WithoutCompany_IsValid(string role)
+    [InlineData(Roles.Manager)]
+    public void OwnerOrManager_WithoutCompany_IsValid(string role)
     {
         Assert.Empty(InvalidFields(new CreateUserRequest("ivan", "password", role, null)));
     }
@@ -41,8 +41,8 @@ public class CreateUserRequestValidatorTests
 
     [Theory]
     [InlineData(Roles.Owner)]
-    [InlineData(Roles.Crew)]
-    public void OwnerOrCrew_WithCompany_IsInvalid(string role)
+    [InlineData(Roles.Manager)]
+    public void OwnerOrManager_WithCompany_IsInvalid(string role)
     {
         Assert.Equal(["CompanyId"], InvalidFields(new CreateUserRequest("ivan", "password", role, CompanyId)));
     }
@@ -51,6 +51,7 @@ public class CreateUserRequestValidatorTests
     [InlineData("")]
     [InlineData("Admin")]
     [InlineData("owner")]
+    [InlineData("Crew")]
     public void UnknownRole_IsInvalid(string role)
     {
         Assert.Contains("Role", InvalidFields(new CreateUserRequest("ivan", "password", role, null)));
@@ -59,13 +60,13 @@ public class CreateUserRequestValidatorTests
     [Fact]
     public void Password_SevenCharacters_IsInvalid()
     {
-        Assert.Equal(["Password"], InvalidFields(new CreateUserRequest("ivan", "1234567", Roles.Crew, null)));
+        Assert.Equal(["Password"], InvalidFields(new CreateUserRequest("ivan", "1234567", Roles.Manager, null)));
     }
 
     [Fact]
     public void Password_EightCharacters_IsValid()
     {
-        Assert.Empty(InvalidFields(new CreateUserRequest("ivan", "12345678", Roles.Crew, null)));
+        Assert.Empty(InvalidFields(new CreateUserRequest("ivan", "12345678", Roles.Manager, null)));
     }
 
     [Theory]
@@ -73,7 +74,7 @@ public class CreateUserRequestValidatorTests
     [InlineData("   ")]
     public void EmptyUserName_IsInvalid(string userName)
     {
-        Assert.Equal(["UserName"], InvalidFields(new CreateUserRequest(userName, "password", Roles.Crew, null)));
+        Assert.Equal(["UserName"], InvalidFields(new CreateUserRequest(userName, "password", Roles.Manager, null)));
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public class CreateUserRequestValidatorTests
     {
         Assert.Equal(
             ["UserName"],
-            InvalidFields(new CreateUserRequest(new string('a', 51), "password", Roles.Crew, null)));
+            InvalidFields(new CreateUserRequest(new string('a', 51), "password", Roles.Manager, null)));
     }
 
     [Theory]
@@ -90,7 +91,7 @@ public class CreateUserRequestValidatorTests
     public void UserName_WithSpaceOrOtherSymbol_IsInvalid_WithBulgarianMessage(string userName)
     {
         var errors = new CreateUserRequestValidator()
-            .Validate(new CreateUserRequest(userName, "password", Roles.Crew, null))
+            .Validate(new CreateUserRequest(userName, "password", Roles.Manager, null))
             .Errors;
 
         var error = Assert.Single(errors);
@@ -103,6 +104,6 @@ public class CreateUserRequestValidatorTests
     [Fact]
     public void CyrillicUserName_IsValid()
     {
-        Assert.Empty(InvalidFields(new CreateUserRequest("иван.петров", "password", Roles.Crew, null)));
+        Assert.Empty(InvalidFields(new CreateUserRequest("иван.петров", "password", Roles.Manager, null)));
     }
 }

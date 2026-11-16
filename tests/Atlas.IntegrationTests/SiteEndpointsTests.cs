@@ -16,7 +16,7 @@ namespace Atlas.IntegrationTests;
 [Collection("Api")]
 public class SiteEndpointsTests(AtlasApiFactory factory)
 {
-    private const string Password = "crew-password";
+    private const string Password = "user-password";
 
     private const string Zhenistroy = "ЖЕНИСТРОЙ ЕООД";
 
@@ -418,29 +418,29 @@ public class SiteEndpointsTests(AtlasApiFactory factory)
     }
 
     [Fact]
-    public async Task Crew_CanCreateAndUpdate_ButNotDelete()
+    public async Task Manager_CanCreateAndUpdate_ButNotDelete()
     {
         await factory.ResetDatabaseAsync();
-        await factory.CreateUserAsync("crew", Password, Roles.Crew);
-        var crew = await factory.CreateLoggedInClientAsync("crew", Password);
+        await factory.CreateUserAsync("manager", Password, Roles.Manager);
+        var manager = await factory.CreateLoggedInClientAsync("manager", Password);
 
-        var create = await crew.PostAsJsonAsync("/api/sites", new CreateSiteRequest("Баня"), Json);
+        var create = await manager.PostAsJsonAsync("/api/sites", new CreateSiteRequest("Баня"), Json);
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
         var site = (await create.Content.ReadFromJsonAsync<SiteResponse>(Json))!;
 
-        var list = await crew.GetAsync("/api/sites");
-        var get = await crew.GetAsync($"/api/sites/{site.Id}");
-        var update = await crew.PutAsJsonAsync(
+        var list = await manager.GetAsync("/api/sites");
+        var get = await manager.GetAsync($"/api/sites/{site.Id}");
+        var update = await manager.PutAsJsonAsync(
             $"/api/sites/{site.Id}",
             new UpdateSiteRequest("Баня", SiteStatus.Active),
             Json);
-        var delete = await crew.DeleteAsync($"/api/sites/{site.Id}");
+        var delete = await manager.DeleteAsync($"/api/sites/{site.Id}");
 
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
         Assert.Equal(HttpStatusCode.OK, get.StatusCode);
         Assert.Equal(HttpStatusCode.OK, update.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, delete.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await crew.GetAsync($"/api/sites/{site.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await manager.GetAsync($"/api/sites/{site.Id}")).StatusCode);
     }
 
     [Fact]

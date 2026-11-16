@@ -6,8 +6,7 @@ using Atlas.Application.Identity;
 using Atlas.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-// Companies that give us work. Our people (Owner, Crew) read the list (for the site form);
-// only the Owner adds, renames and deletes.
+// Companies that give us work. Owner and Manager read, add and rename them; only the Owner deletes.
 public static class CompanyEndpoints
 {
     public static IEndpointRouteBuilder MapCompanyEndpoints(this IEndpointRouteBuilder app)
@@ -22,7 +21,6 @@ public static class CompanyEndpoints
             .WithDescription("All companies, ordered by name.");
 
         group.MapPost("/", CreateCompany)
-            .RequireAuthorization(Policies.Owner)
             .WithValidation<CreateCompanyRequest>()
             .WithName("CreateCompany")
             .WithSummary("Add a company")
@@ -31,7 +29,6 @@ public static class CompanyEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPut("/{id:guid}", RenameCompany)
-            .RequireAuthorization(Policies.Owner)
             .WithValidation<UpdateCompanyRequest>()
             .WithName("RenameCompany")
             .WithSummary("Rename a company")

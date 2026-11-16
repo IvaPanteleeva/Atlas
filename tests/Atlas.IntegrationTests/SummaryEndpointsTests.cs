@@ -15,11 +15,11 @@ using Microsoft.AspNetCore.Mvc;
 namespace Atlas.IntegrationTests;
 
 // The sums computed on the server (CLAUDE.md "Плащания и суми"): Earned, Paid, Remaining, OpenCount.
-// Only the Owner sees them; Crew sees the work days and the site list without money.
+// Owner and Manager see them; the site list itself never carries money.
 [Collection("Api")]
 public class SummaryEndpointsTests(AtlasApiFactory factory)
 {
-    private const string Password = "crew-password";
+    private const string Password = "user-password";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -200,22 +200,24 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
     }
 
     [Fact]
-    public async Task Crew_Gets403_OnSummaryAndSummaries_ButSeesTheSiteListWithoutMoney()
+    public async Task Manager_SeesSummaryAndSummaries_AndTheSiteListStaysWithoutMoney()
     {
         await factory.ResetDatabaseAsync();
         var owner = await factory.CreateOwnerClientAsync();
         var siteId = await CreateSiteAsync(owner, "Баня");
         await CreateDayAsync(owner, siteId, Today, Item("Плочки", 2m, Unit.SquareMeter, 10m));
         await CreatePaymentAsync(owner, siteId, 5m);
-        await factory.CreateUserAsync("crew", Password, Roles.Crew);
-        var crew = await factory.CreateLoggedInClientAsync("crew", Password);
+        await factory.CreateUserAsync("manager", Password, Roles.Manager);
+        var manager = await factory.CreateLoggedInClientAsync("manager", Password);
 
-        var summary = await crew.GetAsync($"/api/sites/{siteId}/summary");
-        var summaries = await crew.GetAsync("/api/sites/summaries");
-        var list = await crew.GetAsync("/api/sites");
+        var summary = await manager.GetAsync($"/api/sites/{siteId}/summary");
+        var summaries = await manager.GetAsync("/api/sites/summaries");
+        var list = await manager.GetAsync("/api/sites");
 
-        Assert.Equal(HttpStatusCode.Forbidden, summary.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, summaries.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, summary.StatusCode);
+        var siteSummary = await summary.Content.ReadFromJsonAsync<SiteSummaryResponse>(Json);
+        Assert.Equal((20m, 5m, 15m), (siteSummary!.Earned, siteSummary.Paid, siteSummary.Remaining));
+        Assert.Equal(HttpStatusCode.OK, summaries.StatusCode);
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
         var raw = await list.Content.ReadAsStringAsync();
         foreach (var money in new[] { "earned", "paid", "remaining", "amount", "total", "openCount" })

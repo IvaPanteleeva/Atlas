@@ -20,7 +20,7 @@ public class IdentitySeedTests(AtlasApiFactory factory)
         var roleNames = await roleManager.Roles.Select(r => r.Name).ToListAsync();
 
         Assert.Equal(
-            [Roles.ClientViewer, Roles.Crew, Roles.Owner],
+            [Roles.ClientViewer, Roles.Manager, Roles.Owner],
             roleNames.Order(StringComparer.Ordinal));
     }
 

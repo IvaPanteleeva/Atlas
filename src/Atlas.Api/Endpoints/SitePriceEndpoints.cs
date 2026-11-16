@@ -5,7 +5,7 @@ using Atlas.Application.Identity;
 using Atlas.Application.SitePrices;
 using Atlas.Infrastructure.Persistence.Repositories;
 
-// Prices agreed for services on one site. Our people (Owner, Crew) read them; only the Owner
+// Prices agreed for services on one site. Owner and Manager read, add and edit them; only the Owner
 // adds, changes and deletes (CLAUDE.md "Услуги и цени по обект").
 public static class SitePriceEndpoints
 {
@@ -23,7 +23,6 @@ public static class SitePriceEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/", CreateSitePrice)
-            .RequireAuthorization(Policies.Owner)
             .WithValidation<CreateSitePriceRequest>()
             .WithName("CreateSitePrice")
             .WithSummary("Add a price for a site")
@@ -33,7 +32,6 @@ public static class SitePriceEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPut("/{priceId:guid}", UpdateSitePrice)
-            .RequireAuthorization(Policies.Owner)
             .WithValidation<UpdateSitePriceRequest>()
             .WithName("UpdateSitePrice")
             .WithSummary("Change a site price")

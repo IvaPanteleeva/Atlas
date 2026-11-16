@@ -76,7 +76,7 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>, IAsyncLife
         await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
     }
 
-    // Creates a user directly through UserManager (no HTTP), e.g. a Crew member for a 403 test.
+    // Creates a user directly through UserManager (no HTTP), e.g. a Manager for a 403 test.
     public async Task<AtlasUser> CreateUserAsync(string userName, string password, string role, Guid? companyId = null)
     {
         using var scope = Services.CreateScope();
@@ -89,6 +89,28 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>, IAsyncLife
         Assert.True(inRole.Succeeded, string.Join(", ", inRole.Errors.Select(e => e.Description)));
 
         return user;
+    }
+
+    // The user's current security stamp, read from the database (it changes when the password is set).
+    public async Task<string?> GetSecurityStampAsync(Guid userId)
+    {
+        using var scope = Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AtlasUser>>();
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        Assert.NotNull(user);
+        return await userManager.GetSecurityStampAsync(user);
+    }
+
+    // Rows left in SiteContacts for a site, read straight from the database (the API answers 404 for a deleted site).
+    public async Task<long> CountSiteContactsAsync(Guid siteId)
+    {
+        await using var connection = new NpgsqlConnection(_database.GetConnectionString());
+        await connection.OpenAsync();
+        await using var command = new NpgsqlCommand(
+            """SELECT count(*) FROM "SiteContacts" WHERE "SiteId" = @siteId""",
+            connection);
+        command.Parameters.AddWithValue("siteId", siteId);
+        return (long)(await command.ExecuteScalarAsync())!;
     }
 
     // A client whose cookie container holds the login cookie of the given user.

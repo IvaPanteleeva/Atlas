@@ -41,10 +41,16 @@ public static class AuthConfiguration
             };
         });
 
+        // The cookie is checked against the user's security stamp every minute (default 30 minutes), so a password
+        // set by the Owner or a deleted profile ends the user's other sessions within a minute (CLAUDE.md "Хора и
+        // профили"). The check is one small database read per user per minute.
+        services.Configure<SecurityStampValidatorOptions>(options =>
+            options.ValidationInterval = TimeSpan.FromMinutes(1));
+
         services
             .AddAuthorizationBuilder()
             .AddPolicy(Policies.Owner, policy => policy.RequireRole(Roles.Owner))
-            .AddPolicy(Policies.Staff, policy => policy.RequireRole(Roles.Owner, Roles.Crew))
+            .AddPolicy(Policies.Staff, policy => policy.RequireRole(Roles.Owner, Roles.Manager))
             .AddPolicy(Policies.Client, policy => policy.RequireRole(Roles.ClientViewer))
             // Every endpoint needs a signed-in user unless it says AllowAnonymous (login, health, ...).
             .SetFallbackPolicy(new AuthorizationPolicyBuilder()

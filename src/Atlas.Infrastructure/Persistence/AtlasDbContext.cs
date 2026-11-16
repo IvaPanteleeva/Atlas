@@ -23,6 +23,12 @@ public sealed class AtlasDbContext(DbContextOptions<AtlasDbContext> options)
 
     public DbSet<ClientPayment> ClientPayments => this.Set<ClientPayment>();
 
+    public DbSet<Person> People => this.Set<Person>();
+
+    public DbSet<WorkDayWorker> WorkDayWorkers => this.Set<WorkDayWorker>();
+
+    public DbSet<SiteContact> SiteContacts => this.Set<SiteContact>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Identity's own model first, so our configurations can extend it.

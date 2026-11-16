@@ -5,8 +5,8 @@ using Atlas.Application.Identity;
 using Atlas.Application.WorkDays;
 using Atlas.Infrastructure.Persistence.Repositories;
 
-// Work days of one site. Owner and Crew add, read and edit them; only the Owner deletes (CLAUDE.md "Работни дни").
-// The prices of the items are decided in WorkDayRepository by the caller's role.
+// Work days of one site. Owner and Manager add, read and edit them, prices included; only the Owner deletes
+// (CLAUDE.md "Работни дни"). The prices are stored as sent.
 public static class WorkDayEndpoints
 {
     public static IEndpointRouteBuilder MapWorkDayEndpoints(this IEndpointRouteBuilder app)
@@ -34,8 +34,8 @@ public static class WorkDayEndpoints
             .WithName("CreateWorkDay")
             .WithSummary("Add a work day")
             .WithDescription(
-                "Adds a day with 1–50 items. Owner: prices as sent. Crew: prices come from the site price, "
-                + "then the service default, else none. A Lead site becomes Active.")
+                "Adds a day with 1–50 items; the prices are stored as sent (null = „цена?“). "
+                + "A Lead site becomes Active.")
             .Produces<WorkDayResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -44,8 +44,8 @@ public static class WorkDayEndpoints
             .WithName("UpdateWorkDay")
             .WithSummary("Edit a work day")
             .WithDescription(
-                "Replaces the day and its items. Crew: kept items (same id) keep their price, new items are priced "
-                + "like on create.")
+                "Replaces the day and its items (kept items by id); the prices are stored as sent. "
+                + "WorkerIds null keeps the workers.")
             .Produces<WorkDayResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 

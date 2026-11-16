@@ -6,8 +6,8 @@ using Atlas.Application.Services;
 using Atlas.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-// Services we do (e.g. „Шпакловка“ per м²) with an optional default price. Our people (Owner, Crew)
-// read the list (Crew picks from it in a work day); only the Owner adds, edits and deletes
+// Services we do (e.g. „Шпакловка“ per м²) with an optional default price. Owner and Manager
+// read, add and edit them; only the Owner deletes
 // (CLAUDE.md "Услуги и цени по обект").
 public static class ServiceEndpoints
 {
@@ -23,7 +23,6 @@ public static class ServiceEndpoints
             .WithDescription("All services, by name, then unit.");
 
         group.MapPost("/", CreateService)
-            .RequireAuthorization(Policies.Owner)
             .WithValidation<CreateServiceRequest>()
             .WithName("CreateService")
             .WithSummary("Add a service")
@@ -32,7 +31,6 @@ public static class ServiceEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPut("/{id:guid}", UpdateService)
-            .RequireAuthorization(Policies.Owner)
             .WithValidation<UpdateServiceRequest>()
             .WithName("UpdateService")
             .WithSummary("Edit a service")

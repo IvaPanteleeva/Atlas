@@ -1,6 +1,6 @@
 namespace Atlas.Application.Sites;
 
-/// <summary>Payload for editing a site (Owner or Crew). Replaces all fields; same rules as when adding.</summary>
+/// <summary>Payload for editing a site (Owner or Manager). Replaces all fields; same rules as when adding.</summary>
 /// <param name="Name">Required, up to 200 characters; may repeat.</param>
 /// <param name="Status">Required: Lead, Active or Done (nullable only so a missing value is a 400, not Lead).</param>
 /// <param name="CompanyId">An existing company, or null for a direct customer.</param>

@@ -9,6 +9,7 @@ namespace Atlas.Application.WorkDays;
 /// <param name="Items">The items, in their order.</param>
 /// <param name="Total">Sum of the items that have a price, in EUR.</param>
 /// <param name="OpenCount">Items to clarify: without a price or flagged NeedsReview.</param>
+/// <param name="Workers">Who worked, by name.</param>
 public sealed record WorkDayResponse(
     Guid Id,
     Guid SiteId,
@@ -17,4 +18,5 @@ public sealed record WorkDayResponse(
     string? Note,
     IReadOnlyList<WorkItemResponse> Items,
     decimal Total,
-    int OpenCount);
+    int OpenCount,
+    IReadOnlyList<WorkerResponse> Workers);

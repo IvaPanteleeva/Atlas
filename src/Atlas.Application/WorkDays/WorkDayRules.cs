@@ -56,19 +56,19 @@ public static class WorkDayRules
     public static bool IsOpen(decimal? rate, bool needsReview)
         => rate is null || needsReview;
 
-    // The price an item gets when it is saved (CLAUDE.md "Работни дни"):
-    // the Owner's price is taken as sent (also null). Crew does not set prices: an item that already exists keeps
-    // its stored price, a new one gets the site price, then the service's default price, else null (free text has neither).
-    public static decimal? ResolveRate(
-        bool isOwner,
-        decimal? requestedRate,
-        bool isExistingItem,
-        decimal? storedRate,
-        decimal? sitePrice,
-        decimal? defaultRate)
-        => isOwner ? requestedRate
-            : isExistingItem ? storedRate
-            : sitePrice ?? defaultRate;
+    public const string WorkerNotFoundMessage = "Няма такъв човек.";
+
+    public const string WorkerNotCrewMessage = "Човекът не е от екипа.";
+
+    // Who may be put on a day (CLAUDE.md "Хора и профили"): isCrew is null for an unknown person.
+    // A new worker must be crew; someone already on the day stays even when no longer crew (old days keep their people).
+    public static string? WorkerError(bool isOnTheDay, bool? isCrew)
+        => isCrew switch
+        {
+            null => WorkerNotFoundMessage,
+            false when !isOnTheDay => WorkerNotCrewMessage,
+            _ => null,
+        };
 
     // Optional text is trimmed; empty or only spaces means "no value" and is stored as null.
     public static string? NormalizeOptional(string? value)

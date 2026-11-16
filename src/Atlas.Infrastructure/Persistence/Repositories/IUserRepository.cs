@@ -12,4 +12,11 @@ public interface IUserRepository : IRepository<AtlasUser>
 
     // All users with their role and company, ordered by user name.
     Task<IReadOnlyList<UserResponse>> ListAsync(CancellationToken cancellationToken);
+
+    // Sets a new password (Identity rules; Validation on password). The security stamp changes, so the user's
+    // other sessions end. NotFound when there is no such user.
+    Task<Result> SetPasswordAsync(Guid id, SetPasswordRequest request, CancellationToken cancellationToken);
+
+    // NotFound; Conflict for the caller's own user or for the last Owner.
+    Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken);
 }

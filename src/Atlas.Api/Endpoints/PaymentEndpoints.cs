@@ -5,15 +5,15 @@ using Atlas.Application.Identity;
 using Atlas.Application.Payments;
 using Atlas.Infrastructure.Persistence.Repositories;
 
-// Client payments of one site (CLAUDE.md "Плащания и суми"): only the Owner sees and changes them;
-// Crew sees only the work days.
+// Client payments of one site (CLAUDE.md "Плащания и суми"): Owner and Manager see, add and edit them;
+// only the Owner deletes.
 public static class PaymentEndpoints
 {
     public static IEndpointRouteBuilder MapPaymentEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/sites/{siteId:guid}/payments")
             .WithTags("Payments")
-            .RequireAuthorization(Policies.Owner);
+            .RequireAuthorization(Policies.Staff);
 
         group.MapGet("/", GetPayments)
             .WithName("GetPayments")
@@ -39,6 +39,7 @@ public static class PaymentEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{id:guid}", DeletePayment)
+            .RequireAuthorization(Policies.Owner)
             .WithName("DeletePayment")
             .WithSummary("Delete a payment")
             .WithDescription("Deletes the payment.")

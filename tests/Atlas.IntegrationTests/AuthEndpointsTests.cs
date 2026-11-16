@@ -61,7 +61,7 @@ public class AuthEndpointsTests(AtlasApiFactory factory)
     public async Task Login_FiveWrongAttempts_LocksOut_EvenForTheCorrectPassword()
     {
         await factory.ResetDatabaseAsync();
-        await factory.CreateUserAsync("lockout-crew", "right-password", Roles.Crew);
+        await factory.CreateUserAsync("lockout-crew", "right-password", Roles.Manager);
         var client = factory.CreateClient();
 
         for (var attempt = 0; attempt < 5; attempt++)

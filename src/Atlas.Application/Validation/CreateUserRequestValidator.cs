@@ -34,7 +34,7 @@ public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserReq
             .Must(role => Roles.All.Contains(role))
             .WithMessage($"Ролята трябва да е една от: {string.Join(", ", Roles.All)}.");
 
-        // Only a ClientViewer belongs to a company; Owner and Crew are our own people.
+        // Only a ClientViewer belongs to a company; Owner and Manager are our own people.
         this.RuleFor(r => r.CompanyId)
             .NotNull()
             .When(r => r.Role == Roles.ClientViewer)
@@ -42,7 +42,7 @@ public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserReq
 
         this.RuleFor(r => r.CompanyId)
             .Null()
-            .When(r => r.Role is Roles.Owner or Roles.Crew)
+            .When(r => r.Role is Roles.Owner or Roles.Manager)
             .WithMessage("Само ClientViewer може да има фирма.");
     }
 }

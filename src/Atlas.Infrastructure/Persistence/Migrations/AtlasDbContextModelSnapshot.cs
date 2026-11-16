@@ -148,6 +148,33 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.Person", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCrew")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("People", (string)null);
+                });
+
             modelBuilder.Entity("Atlas.Infrastructure.Entities.Service", b =>
                 {
                     b.Property<Guid>("Id")
@@ -218,6 +245,39 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.ToTable("Sites");
                 });
 
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.SiteContact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SiteId");
+
+                    b.ToTable("SiteContacts");
+                });
+
             modelBuilder.Entity("Atlas.Infrastructure.Entities.SitePrice", b =>
                 {
                     b.Property<Guid>("Id")
@@ -272,6 +332,21 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId", "Date");
 
                     b.ToTable("WorkDays");
+                });
+
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.WorkDayWorker", b =>
+                {
+                    b.Property<Guid>("WorkDayId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("WorkDayId", "PersonId");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("WorkDayWorkers");
                 });
 
             modelBuilder.Entity("Atlas.Infrastructure.Entities.WorkItem", b =>
@@ -480,6 +555,17 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.Navigation("Company");
                 });
 
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.SiteContact", b =>
+                {
+                    b.HasOne("Atlas.Infrastructure.Entities.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Site");
+                });
+
             modelBuilder.Entity("Atlas.Infrastructure.Entities.SitePrice", b =>
                 {
                     b.HasOne("Atlas.Infrastructure.Entities.Service", "Service")
@@ -508,6 +594,25 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Site");
+                });
+
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.WorkDayWorker", b =>
+                {
+                    b.HasOne("Atlas.Infrastructure.Entities.Person", "Person")
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Atlas.Infrastructure.Entities.WorkDay", "WorkDay")
+                        .WithMany("Workers")
+                        .HasForeignKey("WorkDayId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Person");
+
+                    b.Navigation("WorkDay");
                 });
 
             modelBuilder.Entity("Atlas.Infrastructure.Entities.WorkItem", b =>
@@ -582,6 +687,8 @@ namespace Atlas.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Atlas.Infrastructure.Entities.WorkDay", b =>
                 {
                     b.Navigation("Items");
+
+                    b.Navigation("Workers");
                 });
 #pragma warning restore 612, 618
         }

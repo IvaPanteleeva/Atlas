@@ -16,7 +16,7 @@ namespace Atlas.IntegrationTests;
 [Collection("Api")]
 public class ServiceEndpointsTests(AtlasApiFactory factory)
 {
-    private const string Password = "crew-password";
+    private const string Password = "user-password";
 
     private const string NotFoundTitle = "Няма такава услуга.";
 
@@ -59,27 +59,29 @@ public class ServiceEndpointsTests(AtlasApiFactory factory)
     }
 
     [Fact]
-    public async Task Crew_CanList_ButNotWrite()
+    public async Task Manager_CanListCreateUpdate_ButNotDelete()
     {
         await factory.ResetDatabaseAsync();
         var owner = await factory.CreateOwnerClientAsync();
         var service = await CreateAsync(owner, new CreateServiceRequest("Шпакловка", Unit.SquareMeter, 6.5m));
-        await factory.CreateUserAsync("crew", Password, Roles.Crew);
-        var crew = await factory.CreateLoggedInClientAsync("crew", Password);
+        await factory.CreateUserAsync("manager", Password, Roles.Manager);
+        var manager = await factory.CreateLoggedInClientAsync("manager", Password);
 
-        var list = await crew.GetAsync("/api/services");
-        var create = await crew.PostAsJsonAsync("/api/services", new CreateServiceRequest("Боя", Unit.SquareMeter), Json);
-        var update = await crew.PutAsJsonAsync(
+        var list = await manager.GetAsync("/api/services");
+        var create = await manager.PostAsJsonAsync("/api/services", new CreateServiceRequest("Боя", Unit.SquareMeter, 4m), Json);
+        var update = await manager.PutAsJsonAsync(
             $"/api/services/{service.Id}",
-            new UpdateServiceRequest("Боя", Unit.SquareMeter),
+            new UpdateServiceRequest("Шпакловка", Unit.SquareMeter, 7m),
             Json);
-        var delete = await crew.DeleteAsync($"/api/services/{service.Id}");
+        var delete = await manager.DeleteAsync($"/api/services/{service.Id}");
 
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
         Assert.Equal([service], (await list.Content.ReadFromJsonAsync<ServiceResponse[]>(Json))!);
-        Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, update.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, delete.StatusCode);
+        var stored = await owner.GetFromJsonAsync<ServiceResponse[]>("/api/services", Json);
+        Assert.Equal([("Боя", (decimal?)4m), ("Шпакловка", 7m)], stored!.Select(s => (s.Name, s.DefaultRate)));
     }
 
     [Fact]

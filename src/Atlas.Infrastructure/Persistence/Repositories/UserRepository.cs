@@ -1,6 +1,8 @@
 namespace Atlas.Infrastructure.Persistence.Repositories;
 
 using Atlas.Application.Common;
+using Atlas.Application.Contracts;
+using Atlas.Application.Identity;
 using Atlas.Application.Users;
 using Atlas.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -8,9 +10,15 @@ using Microsoft.EntityFrameworkCore;
 
 // Users are created through UserManager (password hash, Identity's user name rules),
 // which works on the same scoped AtlasDbContext as this repository.
-public sealed class UserRepository(AtlasDbContext data, UserManager<AtlasUser> userManager)
+public sealed class UserRepository(AtlasDbContext data, UserManager<AtlasUser> userManager, ICurrentUser currentUser)
     : DataRepository<AtlasUser>(data), IUserRepository
 {
+    public const string NotFoundMessage = "Няма такъв профил.";
+
+    public const string CannotDeleteSelfMessage = "Не можеш да изтриеш собствения си профил.";
+
+    public const string LastOwnerMessage = "Трябва да остане поне един Owner.";
+
     public const string UserNameTakenMessage = "Потребителското име е заето";
 
     public const string CompanyNotFoundMessage = "Няма такава фирма.";
@@ -72,6 +80,71 @@ public sealed class UserRepository(AtlasDbContext data, UserManager<AtlasUser> u
                     user.Company != null ? user.Company.Name : null))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+
+    public async Task<Result> SetPasswordAsync(
+        Guid id,
+        SetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(id.ToString());
+        if (user is null)
+        {
+            return Error.NotFound(NotFoundMessage);
+        }
+
+        // No reset tokens (no token providers are registered, and the Owner sets the password directly):
+        // remove + add in one transaction, so a password the Identity rules reject leaves the old one in place.
+        // Both calls change the security stamp, so the user's other sessions stop working when their cookie is
+        // checked again (SecurityStampValidator).
+        await using var transaction = await this.Data.Database.BeginTransactionAsync(cancellationToken);
+
+        var removed = await userManager.RemovePasswordAsync(user);
+        if (!removed.Succeeded)
+        {
+            return ToError(removed);
+        }
+
+        var added = await userManager.AddPasswordAsync(user, request.Password);
+        if (!added.Succeeded)
+        {
+            return ToError(added);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
+        return Result.Success;
+    }
+
+    public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(id.ToString());
+        if (user is null)
+        {
+            return Error.NotFound(NotFoundMessage);
+        }
+
+        if (id == currentUser.UserId)
+        {
+            return Error.Conflict(CannotDeleteSelfMessage);
+        }
+
+        // Someone must still be able to manage the users (CLAUDE.md "Хора и профили").
+        if (await userManager.IsInRoleAsync(user, Roles.Owner)
+            && (await userManager.GetUsersInRoleAsync(Roles.Owner)).Count <= 1)
+        {
+            return Error.Conflict(LastOwnerMessage);
+        }
+
+        // The roles and other Identity rows go with the user (cascade).
+        var deleted = await userManager.DeleteAsync(user);
+        if (!deleted.Succeeded)
+        {
+            throw new InvalidOperationException(
+                $"Deleting user {id} failed: {string.Join(", ", deleted.Errors.Select(e => e.Code))}");
+        }
+
+        return Result.Success;
+    }
 
     // A name taken in the meantime is still a conflict; the other Identity rules are field errors
     // (Password* codes on "password", the rest on "userName").

@@ -1,15 +1,13 @@
 namespace Atlas.Infrastructure.Persistence.Repositories;
 
 using Atlas.Application.Common;
-using Atlas.Application.Contracts;
-using Atlas.Application.Identity;
 using Atlas.Application.Summaries;
 using Atlas.Application.WorkDays;
 using Atlas.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
-public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentUser, TimeProvider timeProvider)
+public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProvider)
     : DataRepository<WorkDay>(data), IWorkDayRepository
 {
     public const string NotFoundMessage = "Няма такъв работен ден.";
@@ -28,6 +26,8 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
         var days = await this.Data.WorkDays
             .AsNoTracking()
             .Include(d => d.Items)
+            .Include(d => d.Workers).ThenInclude(w => w.Person)
+            .AsSplitQuery()
             .Where(d => d.SiteId == siteId)
             .OrderByDescending(d => d.Date)
             .ThenByDescending(d => d.CreatedAt)
@@ -42,6 +42,8 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
         var day = await this.Data.WorkDays
             .AsNoTracking()
             .Include(d => d.Items)
+            .Include(d => d.Workers).ThenInclude(w => w.Person)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(d => d.Id == id && d.SiteId == siteId, cancellationToken);
 
         return day is null ? Error.NotFound(NotFoundMessage) : ToResponse(day);
@@ -58,14 +60,21 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
             return Error.NotFound(SiteRepository.NotFoundMessage);
         }
 
-        var prices = await this.LoadPricesAsync(siteId, Items(request), cancellationToken);
-        if (prices.Error is { } error)
+        if (await this.UnknownServicesAsync(Items(request), cancellationToken) is { } error)
         {
             return error;
         }
 
         var day = new WorkDay { SiteId = siteId, CreatedAt = timeProvider.GetUtcNow() };
-        this.Apply(day, request, prices);
+
+        var workers = await this.LoadWorkersAsync(day, request.WorkerIds ?? [], cancellationToken);
+        if (workers.Error is { } workerError)
+        {
+            return workerError;
+        }
+
+        this.Apply(day, request);
+        SetWorkers(day, workers.People);
 
         // The same save as the day: a Lead site becomes Active (CLAUDE.md "Обекти и фирми").
         site.OnWorkDayAdded();
@@ -83,20 +92,34 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
     {
         var day = await this.Data.WorkDays
             .Include(d => d.Items)
+            .Include(d => d.Workers).ThenInclude(w => w.Person)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(d => d.Id == id && d.SiteId == siteId, cancellationToken);
         if (day is null)
         {
             return Error.NotFound(NotFoundMessage);
         }
 
-        var prices = await this.LoadPricesAsync(siteId, Items(request), cancellationToken);
-        if (prices.Error is { } error)
+        if (await this.UnknownServicesAsync(Items(request), cancellationToken) is { } error)
         {
             return error;
         }
 
+        // No WorkerIds (null) keeps the day's workers; a list (also empty) replaces them.
+        var workers = request.WorkerIds is { } workerIds
+            ? await this.LoadWorkersAsync(day, workerIds, cancellationToken)
+            : null;
+        if (workers?.Error is { } workerError)
+        {
+            return workerError;
+        }
+
         // Only a new day moves the site from Lead to Active; editing does not.
-        this.Apply(day, request, prices);
+        this.Apply(day, request);
+        if (workers is not null)
+        {
+            SetWorkers(day, workers.People);
+        }
 
         return await this.SaveAsync(siteId, day, request, cancellationToken);
     }
@@ -115,8 +138,6 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
 
         return Result.Success;
     }
-
-    private bool IsOwner => currentUser.Role == Roles.Owner;
 
     // The validator makes Items required; the fallback only keeps the compiler happy.
     private static IReadOnlyList<SaveWorkItemRequest> Items(SaveWorkDayRequest request)
@@ -142,6 +163,13 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
             day.Items.Select(i => new SummaryItem(i.Quantity, i.Rate, i.NeedsReview)),
             []);
 
+        // By name, like the people list; the id keeps two people with the same name in a stable order.
+        var workers = day.Workers
+            .Select(w => new WorkerResponse(w.PersonId, w.Person!.Name))
+            .OrderBy(w => w.Name, StringComparer.InvariantCulture)
+            .ThenBy(w => w.Id)
+            .ToList();
+
         return new WorkDayResponse(
             day.Id,
             day.SiteId,
@@ -150,14 +178,17 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
             day.Note,
             items,
             sums.Earned,
-            sums.OpenCount);
+            sums.OpenCount,
+            workers);
     }
 
     // Copies the request onto the day. The item list replaces the old one:
-    // an item whose Id is an item of this day is updated in place (keeps its Id and, for Crew, its price);
+    // an item whose Id is an item of this day is updated in place (keeps its Id);
     // any other item is new (an Id of another day's item is ignored, the item gets a new Id);
     // the old items that are not in the request are deleted.
-    private void Apply(WorkDay day, SaveWorkDayRequest request, ServicePrices prices)
+    // The price is taken as sent (also null, „цена?“), for the Owner and the Manager alike (CLAUDE.md "Работни дни");
+    // the form suggests it from the site price, then the service's default price.
+    private void Apply(WorkDay day, SaveWorkDayRequest request)
     {
         // The validator makes Date required; the fallback only keeps the compiler happy.
         day.Date = request.Date ?? day.Date;
@@ -174,7 +205,6 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
             // Remove, so the same Id twice in a request updates the item once and adds the second as new.
             var item = source.Id is { } itemId && old.Remove(itemId, out var found) ? found : null;
             var isExisting = item is not null;
-            var storedRate = item?.Rate;
 
             // The validator makes Description and Unit required; the fallbacks only keep the compiler happy.
             item ??= new WorkItem { Description = string.Empty };
@@ -184,13 +214,7 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
             item.Unit = source.Unit ?? default;
             item.NeedsReview = source.NeedsReview;
             item.Position = position;
-            item.Rate = WorkDayRules.ResolveRate(
-                this.IsOwner,
-                source.Rate,
-                isExisting,
-                storedRate,
-                prices.SitePrice(source.ServiceId),
-                prices.DefaultRate(source.ServiceId));
+            item.Rate = source.Rate;
 
             if (!isExisting)
             {
@@ -206,10 +230,55 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
         }
     }
 
-    // The services named in the request with their default price and the site's price.
-    // An unknown service is a 400 on that item (items[i].serviceId), for the Owner and Crew alike.
-    private async Task<ServicePrices> LoadPricesAsync(
-        Guid siteId,
+    // The day's workers become exactly these people: the links of the others are deleted, new ones added.
+    private static void SetWorkers(WorkDay day, IReadOnlyList<Person> people)
+    {
+        var wanted = people.Select(p => p.Id).ToHashSet();
+        day.Workers.RemoveAll(w => !wanted.Contains(w.PersonId));
+
+        var current = day.Workers.Select(w => w.PersonId).ToHashSet();
+        foreach (var person in people.Where(p => !current.Contains(p.Id)))
+        {
+            day.Workers.Add(new WorkDayWorker { PersonId = person.Id, Person = person });
+        }
+    }
+
+    // The people named in the request (each id once). A person already on the day may stay even when no longer crew;
+    // a new one must be crew; an unknown id is an error (WorkDayRules.WorkerError). Errors are a 400 on workerIds.
+    private async Task<Workers> LoadWorkersAsync(
+        WorkDay day,
+        IReadOnlyList<Guid> workerIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = workerIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return Workers.None;
+        }
+
+        var people = await this.Data.People
+            .Where(p => ids.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, cancellationToken);
+        var onTheDay = day.Workers.Select(w => w.PersonId).ToHashSet();
+
+        var messages = ids
+            .Select(id => WorkDayRules.WorkerError(
+                onTheDay.Contains(id),
+                people.TryGetValue(id, out var person) ? person.IsCrew : null))
+            .OfType<string>()
+            .Distinct()
+            .ToArray();
+        if (messages.Length > 0)
+        {
+            return new Workers([], Error.Validation(new Dictionary<string, string[]> { ["workerIds"] = messages }));
+        }
+
+        return new Workers([.. ids.Select(id => people[id])], null);
+    }
+
+    // An unknown service is a 400 on that item (items[i].serviceId); null when all services exist.
+    // The service only says where the item came from; its price is not used here.
+    private async Task<Error?> UnknownServicesAsync(
         IReadOnlyList<SaveWorkItemRequest> items,
         CancellationToken cancellationToken)
     {
@@ -220,31 +289,22 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
             .ToList();
         if (serviceIds.Count == 0)
         {
-            return ServicePrices.None;
+            return null;
         }
 
-        var defaults = await this.Data.Services
-            .AsNoTracking()
+        var known = await this.Data.Services
             .Where(s => serviceIds.Contains(s.Id))
-            .ToDictionaryAsync(s => s.Id, s => s.DefaultRate, cancellationToken);
+            .Select(s => s.Id)
+            .ToListAsync(cancellationToken);
 
         var errors = items
             .Select((item, index) => (item, index))
-            .Where(x => x.item.ServiceId is { } id && !defaults.ContainsKey(id))
+            .Where(x => x.item.ServiceId is { } id && !known.Contains(id))
             .ToDictionary(
                 x => $"items[{x.index}].serviceId",
                 _ => new[] { ServiceRepository.NotFoundMessage });
-        if (errors.Count > 0)
-        {
-            return new ServicePrices(defaults, new Dictionary<Guid, decimal>(), Error.Validation(errors));
-        }
 
-        var sitePrices = await this.Data.SitePrices
-            .AsNoTracking()
-            .Where(p => p.SiteId == siteId && serviceIds.Contains(p.ServiceId))
-            .ToDictionaryAsync(p => p.ServiceId, p => p.Rate, cancellationToken);
-
-        return new ServicePrices(defaults, sitePrices, null);
+        return errors.Count > 0 ? Error.Validation(errors) : null;
     }
 
     private async Task<Result<WorkDayResponse>> SaveAsync(
@@ -269,10 +329,19 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
                 return Error.NotFound(SiteRepository.NotFoundMessage);
             }
 
-            var prices = await this.LoadPricesAsync(siteId, Items(request), cancellationToken);
-            if (prices.Error is { } error)
+            if (await this.UnknownServicesAsync(Items(request), cancellationToken) is { } error)
             {
                 return error;
+            }
+
+            // Or a person was deleted.
+            var workerIds = day.Workers.Select(w => w.PersonId).ToList();
+            if (await this.Data.People.CountAsync(p => workerIds.Contains(p.Id), cancellationToken) < workerIds.Count)
+            {
+                return Error.Validation(new Dictionary<string, string[]>
+                {
+                    ["workerIds"] = [WorkDayRules.WorkerNotFoundMessage],
+                });
             }
 
             throw;
@@ -284,17 +353,8 @@ public sealed class WorkDayRepository(AtlasDbContext data, ICurrentUser currentU
     private async Task<bool> SiteExistsAsync(Guid siteId, CancellationToken cancellationToken)
         => await this.Data.Sites.AnyAsync(s => s.Id == siteId, cancellationToken);
 
-    private sealed record ServicePrices(
-        IReadOnlyDictionary<Guid, decimal?> Defaults,
-        IReadOnlyDictionary<Guid, decimal> SitePrices,
-        Error? Error)
+    private sealed record Workers(IReadOnlyList<Person> People, Error? Error)
     {
-        public static readonly ServicePrices None = new(new Dictionary<Guid, decimal?>(), new Dictionary<Guid, decimal>(), null);
-
-        public decimal? SitePrice(Guid? serviceId)
-            => serviceId is { } id && this.SitePrices.TryGetValue(id, out var rate) ? rate : null;
-
-        public decimal? DefaultRate(Guid? serviceId)
-            => serviceId is { } id && this.Defaults.TryGetValue(id, out var rate) ? rate : null;
+        public static readonly Workers None = new([], null);
     }
 }

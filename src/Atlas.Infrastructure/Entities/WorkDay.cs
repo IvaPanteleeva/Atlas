@@ -21,4 +21,6 @@ public class WorkDay
     public DateTimeOffset CreatedAt { get; set; }
 
     public List<WorkItem> Items { get; set; } = [];
+
+    public List<WorkDayWorker> Workers { get; set; } = [];
 }

@@ -1,6 +1,6 @@
 namespace Atlas.Application.Sites;
 
-/// <summary>Payload for adding a site (Owner or Crew). Text is trimmed; empty optional text is stored as null.</summary>
+/// <summary>Payload for adding a site (Owner or Manager). Text is trimmed; empty optional text is stored as null.</summary>
 /// <param name="Name">Required, up to 200 characters; may repeat.</param>
 /// <param name="Status">Lead, Active or Done; Lead when missing.</param>
 /// <param name="CompanyId">An existing company, or null for a direct customer.</param>

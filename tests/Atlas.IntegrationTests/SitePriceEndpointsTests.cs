@@ -14,7 +14,7 @@ namespace Atlas.IntegrationTests;
 [Collection("Api")]
 public class SitePriceEndpointsTests(AtlasApiFactory factory)
 {
-    private const string Password = "crew-password";
+    private const string Password = "user-password";
 
     private const string SiteNotFoundTitle = "Няма такъв обект.";
 
@@ -282,32 +282,35 @@ public class SitePriceEndpointsTests(AtlasApiFactory factory)
     }
 
     [Fact]
-    public async Task Crew_CanList_ButNotWrite()
+    public async Task Manager_CanListCreateUpdate_ButNotDelete()
     {
         await factory.ResetDatabaseAsync();
         var owner = await factory.CreateOwnerClientAsync();
         var siteId = await CreateSiteAsync(owner, "Баня");
         var service = await CreateServiceAsync(owner, "Шпакловка", Unit.SquareMeter);
         var price = await AddPriceAsync(owner, siteId, service.Id, 7m);
-        await factory.CreateUserAsync("crew", Password, Roles.Crew);
-        var crew = await factory.CreateLoggedInClientAsync("crew", Password);
+        var paint = await CreateServiceAsync(owner, "Боя", Unit.SquareMeter);
+        await factory.CreateUserAsync("manager", Password, Roles.Manager);
+        var manager = await factory.CreateLoggedInClientAsync("manager", Password);
 
-        var list = await crew.GetAsync($"/api/sites/{siteId}/prices");
-        var create = await crew.PostAsJsonAsync(
+        var list = await manager.GetAsync($"/api/sites/{siteId}/prices");
+        var create = await manager.PostAsJsonAsync(
             $"/api/sites/{siteId}/prices",
-            new CreateSitePriceRequest(service.Id, 8m),
+            new CreateSitePriceRequest(paint.Id, 4m),
             Json);
-        var update = await crew.PutAsJsonAsync(
+        var update = await manager.PutAsJsonAsync(
             $"/api/sites/{siteId}/prices/{price.Id}",
             new UpdateSitePriceRequest(8m),
             Json);
-        var delete = await crew.DeleteAsync($"/api/sites/{siteId}/prices/{price.Id}");
+        var delete = await manager.DeleteAsync($"/api/sites/{siteId}/prices/{price.Id}");
 
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
         Assert.Equal([price], (await list.Content.ReadFromJsonAsync<SitePriceResponse[]>(Json))!);
-        Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, update.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, delete.StatusCode);
+        var stored = await owner.GetFromJsonAsync<SitePriceResponse[]>($"/api/sites/{siteId}/prices", Json);
+        Assert.Equal([4m, 8m], stored!.Select(p => p.Rate));
     }
 
     [Fact]

@@ -10,7 +10,7 @@ namespace Atlas.IntegrationTests;
 [Collection("Api")]
 public class CompanyEndpointsTests(AtlasApiFactory factory)
 {
-    private const string Password = "crew-password";
+    private const string Password = "user-password";
 
     private const string Zhenistroy = "ЖЕНИСТРОЙ ЕООД";
 
@@ -58,23 +58,26 @@ public class CompanyEndpointsTests(AtlasApiFactory factory)
     }
 
     [Fact]
-    public async Task Crew_CanList_ButNotWrite()
+    public async Task Manager_CanListCreateRename_ButNotDelete()
     {
         await factory.ResetDatabaseAsync();
-        await factory.CreateUserAsync("crew", Password, Roles.Crew);
-        var crew = await factory.CreateLoggedInClientAsync("crew", Password);
+        await factory.CreateUserAsync("manager", Password, Roles.Manager);
+        var manager = await factory.CreateLoggedInClientAsync("manager", Password);
 
-        var list = await crew.GetAsync("/api/companies");
-        var create = await crew.PostAsJsonAsync("/api/companies", new CreateCompanyRequest("Фирма Х"));
-        var rename = await crew.PutAsJsonAsync(
-            $"/api/companies/{CompanyConfiguration.ZhenistroyId}",
-            new UpdateCompanyRequest("Фирма Х"));
-        var delete = await crew.DeleteAsync($"/api/companies/{CompanyConfiguration.ZhenistroyId}");
+        var list = await manager.GetAsync("/api/companies");
+        var create = await manager.PostAsJsonAsync("/api/companies", new CreateCompanyRequest("Фирма Х"));
+        var created = await create.Content.ReadFromJsonAsync<CompanyResponse>();
+        var rename = await manager.PutAsJsonAsync(
+            $"/api/companies/{created!.Id}",
+            new UpdateCompanyRequest("Фирма У"));
+        var delete = await manager.DeleteAsync($"/api/companies/{created.Id}");
 
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, create.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, rename.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, rename.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, delete.StatusCode);
+        var companies = await manager.GetFromJsonAsync<CompanyResponse[]>("/api/companies");
+        Assert.Contains(companies!, c => c.Name == "Фирма У");
     }
 
     [Fact]

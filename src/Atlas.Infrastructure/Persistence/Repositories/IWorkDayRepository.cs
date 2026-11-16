@@ -6,7 +6,7 @@ using Atlas.Application.WorkDays;
 using Atlas.Infrastructure.Entities;
 
 // Lives next to the entity (not in Application): IRepository<WorkDay> needs the WorkDay type.
-// Prices of the items are set here by the caller's role (CLAUDE.md "Работни дни"), see WorkDayRules.ResolveRate.
+// Prices of the items are stored as sent, for the Owner and the Manager alike (CLAUDE.md "Работни дни").
 public interface IWorkDayRepository : IRepository<WorkDay>
 {
     // The days of one site with their items, newest first (date, then entry time). NotFound when there is no such site.

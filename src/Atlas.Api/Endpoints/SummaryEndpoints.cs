@@ -6,7 +6,7 @@ using Atlas.Application.Summaries;
 using Atlas.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-// The sums computed on the server (CLAUDE.md "Плащания и суми"): Owner only, at every site status.
+// The sums computed on the server (CLAUDE.md "Плащания и суми"): Owner and Manager, at every site status.
 // "/api/sites/summaries" does not reach GET /api/sites/{id:guid}: "summaries" is not a guid.
 public static class SummaryEndpoints
 {
@@ -14,7 +14,7 @@ public static class SummaryEndpoints
     {
         var group = app.MapGroup("/api/sites")
             .WithTags("Summaries")
-            .RequireAuthorization(Policies.Owner);
+            .RequireAuthorization(Policies.Staff);
 
         group.MapGet("/{siteId:guid}/summary", GetSiteSummary)
             .WithName("GetSiteSummary")

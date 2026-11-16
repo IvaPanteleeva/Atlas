@@ -2,7 +2,7 @@ namespace Atlas.Application.Sites;
 
 /// <summary>
 /// A site in the list: Active first (latest work day first, sites without days last), then Lead, then Done
-/// (both by name). No note and no money: Crew sees this list too.
+/// (both by name). No note and no money (those come from the site and the summaries).
 /// </summary>
 /// <param name="Id">Site id.</param>
 /// <param name="Name">Site name.</param>

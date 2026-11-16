@@ -6,7 +6,7 @@ using Atlas.Application.Sites;
 using Atlas.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Http.HttpResults;
 
-// Repair sites. Our people (Owner, Crew) see, add and edit them; only the Owner deletes
+// Repair sites. Owner and Manager see, add and edit them; only the Owner deletes
 // (CLAUDE.md "Обекти и фирми"). The client company sees its sites through /portal/... (feature 9).
 public static class SiteEndpoints
 {
