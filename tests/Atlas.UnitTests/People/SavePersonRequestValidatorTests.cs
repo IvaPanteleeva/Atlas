@@ -10,8 +10,9 @@ public class SavePersonRequestValidatorTests
         string name = "Иван",
         string? phone = null,
         string? note = null,
-        bool isCrew = true)
-        => new SavePersonRequestValidator().Validate(new SavePersonRequest(name, phone, note, isCrew));
+        bool isCrew = true,
+        decimal? dailyRate = null)
+        => new SavePersonRequestValidator().Validate(new SavePersonRequest(name, phone, note, isCrew, dailyRate));
 
     private static ValidationFailure SingleError(ValidationResult result, string property)
     {
@@ -90,5 +91,26 @@ public class SavePersonRequestValidatorTests
     public void OnlySpaces_InPhoneAndNote_IsValid()
     {
         Assert.True(Validate(phone: "   ", note: "   ").IsValid);
+    }
+
+    [Theory]
+    [InlineData("80")]
+    [InlineData("85.50")]
+    [InlineData("100000")]
+    public void DailyRate_InRange_IsValid(string rate)
+    {
+        Assert.True(Validate(dailyRate: decimal.Parse(rate, System.Globalization.CultureInfo.InvariantCulture)).IsValid);
+    }
+
+    [Theory]
+    [InlineData("0", Atlas.Application.Common.MoneyRules.MustBePositiveMessage)]
+    [InlineData("100000.01", Atlas.Application.Common.MoneyRules.TooLargeMessage)]
+    [InlineData("80.555", Atlas.Application.Common.MoneyRules.TooManyDecimalsMessage)]
+    public void DailyRate_Bad_IsInvalid_OnDailyRate(string rate, string message)
+    {
+        var error = SingleError(
+            Validate(dailyRate: decimal.Parse(rate, System.Globalization.CultureInfo.InvariantCulture)),
+            "DailyRate");
+        Assert.Equal(message, error.ErrorMessage);
     }
 }

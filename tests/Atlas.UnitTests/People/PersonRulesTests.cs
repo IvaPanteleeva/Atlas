@@ -42,4 +42,12 @@ public class PersonRulesTests
     {
         Assert.Equal((1, (DateOnly?)Monday), PersonRules.WorkStats([Monday, Monday]));
     }
+
+    [Fact]
+    public void Earned_SumsThePays_SkippingEmptyOnes()
+    {
+        Assert.Equal(150.50m, PersonRules.Earned([80m, null, 70.50m]));
+        Assert.Equal(0m, PersonRules.Earned([null]));
+        Assert.Equal(0m, PersonRules.Earned([]));
+    }
 }

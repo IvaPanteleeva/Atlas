@@ -45,7 +45,7 @@ public static class WorkDayEndpoints
             .WithSummary("Edit a work day")
             .WithDescription(
                 "Replaces the day and its items (kept items by id); the prices are stored as sent. "
-                + "WorkerIds null keeps the workers.")
+                + "Workers null keeps the workers and their pay.")
             .Produces<WorkDayResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 

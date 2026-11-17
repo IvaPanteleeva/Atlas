@@ -5,4 +5,6 @@ namespace Atlas.Application.Users;
 /// <param name="Password">At least 8 characters.</param>
 /// <param name="Role">One of Owner, Manager, ClientViewer.</param>
 /// <param name="CompanyId">Required for ClientViewer, must be empty for Owner and Manager.</param>
-public sealed record CreateUserRequest(string UserName, string Password, string Role, Guid? CompanyId);
+/// <param name="PersonId">Optional: the crew member this profile belongs to. An Owner or Manager linked to a person makes
+/// that person a partner („съдружник“). Not allowed for ClientViewer.</param>
+public sealed record CreateUserRequest(string UserName, string Password, string Role, Guid? CompanyId, Guid? PersonId = null);

@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Atlas.Application.Common;
 using Atlas.Application.Identity;
 using Atlas.Application.Payments;
+using Atlas.Application.People;
 using Atlas.Application.Sites;
 using Atlas.Application.Summaries;
 using Atlas.Application.WorkDays;
@@ -51,18 +52,18 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
         await CreateDayAsync(owner, siteId, Today, Item("Извозване", 1m, Unit.Piece, null));
 
         var noPayments = await GetSummaryAsync(owner, siteId);
-        Assert.Equal(new SiteSummaryResponse(105.00m, 0m, 105.00m, 2, 3, Today), noPayments);
+        Assert.Equal(new SiteSummaryResponse(105.00m, 0m, 105.00m, 2, 3, Today, 0m, 0, 105.00m), noPayments);
 
         await CreatePaymentAsync(owner, siteId, 50m);
         await CreatePaymentAsync(owner, siteId, 20m);
 
         var paid = await GetSummaryAsync(owner, siteId);
-        Assert.Equal(new SiteSummaryResponse(105.00m, 70m, 35m, 2, 3, Today), paid);
+        Assert.Equal(new SiteSummaryResponse(105.00m, 70m, 35m, 2, 3, Today, 0m, 0, 105.00m), paid);
 
         await CreatePaymentAsync(owner, siteId, 50m);
 
         var overpaid = await GetSummaryAsync(owner, siteId);
-        Assert.Equal(new SiteSummaryResponse(105.00m, 120m, -15m, 2, 3, Today), overpaid);
+        Assert.Equal(new SiteSummaryResponse(105.00m, 120m, -15m, 2, 3, Today, 0m, 0, 105.00m), overpaid);
     }
 
     // One rule: the site's Earned equals the sum of its days' Totals, and the open count matches too.
@@ -90,7 +91,7 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
         var owner = await factory.CreateOwnerClientAsync();
         var siteId = await CreateSiteAsync(owner, "Баня");
 
-        Assert.Equal(new SiteSummaryResponse(0m, 0m, 0m, 0, 0, null), await GetSummaryAsync(owner, siteId));
+        Assert.Equal(new SiteSummaryResponse(0m, 0m, 0m, 0, 0, null, 0m, 0, 0m), await GetSummaryAsync(owner, siteId));
     }
 
     // Sums do not depend on the status (CLAUDE.md "Обекти и фирми", round 21).
@@ -110,8 +111,8 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
         var summary = await GetSummaryAsync(owner, siteId);
         var all = await GetSummariesAsync(owner);
 
-        Assert.Equal(new SiteSummaryResponse(20m, 5m, 15m, 0, 1, Today), summary);
-        Assert.Equal(new SummaryTotalsResponse(20m, 5m, 15m, 0m, 0, 0), all.Totals);
+        Assert.Equal(new SiteSummaryResponse(20m, 5m, 15m, 0, 1, Today, 0m, 0, 20m), summary);
+        Assert.Equal(new SummaryTotalsResponse(20m, 5m, 15m, 0m, 0, 0, 0m, 0, 20m), all.Totals);
     }
 
     [Fact]
@@ -149,10 +150,10 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
 
         var bySite = summaries.Sites.ToDictionary(s => s.SiteId);
         Assert.Equal(3, summaries.Sites.Count);
-        Assert.Equal(new SiteSummaryListResponse(bath, 105m, 70m, 35m, 2), bySite[bath]);
-        Assert.Equal(new SiteSummaryListResponse(kitchen, 10m, 40m, -30m, 0), bySite[kitchen]);
-        Assert.Equal(new SiteSummaryListResponse(empty, 0m, 0m, 0m, 0), bySite[empty]);
-        Assert.Equal(new SummaryTotalsResponse(115m, 110m, 35m, 30m, 1, 2), summaries.Totals);
+        Assert.Equal(new SiteSummaryListResponse(bath, 105m, 70m, 35m, 2, 0m, 0, 105m), bySite[bath]);
+        Assert.Equal(new SiteSummaryListResponse(kitchen, 10m, 40m, -30m, 0, 0m, 0, 10m), bySite[kitchen]);
+        Assert.Equal(new SiteSummaryListResponse(empty, 0m, 0m, 0m, 0, 0m, 0, 0m), bySite[empty]);
+        Assert.Equal(new SummaryTotalsResponse(115m, 110m, 35m, 30m, 1, 2, 0m, 0, 115m), summaries.Totals);
         Assert.Equal(summaries.Sites.Sum(s => s.Earned), summaries.Totals.Earned);
         Assert.Equal(summaries.Sites.Sum(s => s.Paid), summaries.Totals.Paid);
         Assert.Equal(summaries.Sites.Sum(s => Math.Max(s.Remaining, 0m)), summaries.Totals.Owed);
@@ -166,6 +167,130 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
             (bySite[bath].Earned, bySite[bath].Paid, bySite[bath].Remaining, bySite[bath].OpenCount));
     }
 
+    // CLAUDE.md "Разход за хора": one day with Earned 105 and two people, one paid 80 and one without a pay.
+    // Разход за хора 80, one person-day without a pay, „Остава за нас“ = 105 − 80 = 25 (from Earned, not from Paid).
+    [Fact]
+    public async Task WorkerCost_Example_Cost80_OneOpen_Net25()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var siteId = await CreateSiteAsync(owner, "Професорът");
+        var ivan = await CreatePersonAsync(owner, "Иван");
+        var petar = await CreatePersonAsync(owner, "Петър");
+        await CreateDayWithWorkersAsync(
+            owner,
+            siteId,
+            Today,
+            [new SaveWorkerRequest(ivan, 80m), new SaveWorkerRequest(petar, null)],
+            Item("Шпакловка", 10m, Unit.SquareMeter, 7.50m),
+            Item("Боядисване", 5m, Unit.SquareMeter, 6.00m));
+        await CreatePaymentAsync(owner, siteId, 50m);
+
+        var summary = await GetSummaryAsync(owner, siteId);
+
+        Assert.Equal(new SiteSummaryResponse(105m, 50m, 55m, 0, 1, Today, 80m, 1, 25m), summary);
+    }
+
+    // A partner (linked to an Owner or Manager profile) has no pay but is not „за уточняване“ (CLAUDE.md "Разход за хора").
+    // A person linked later stops counting as open on their old days without a pay (the link is read as it is now).
+    [Fact]
+    public async Task Partner_IsNotCountedAsOpen_AlsoWhenMadeAPartnerLater()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var siteId = await CreateSiteAsync(owner, "Професорът");
+        var ivan = await CreatePersonAsync(owner, "Иван");
+        var petar = await CreatePersonAsync(owner, "Петър");
+        var partner = await CreatePersonAsync(owner, "Ива");
+        await factory.MakePartnerAsync(owner, partner);
+        await CreateDayWithWorkersAsync(
+            owner,
+            siteId,
+            Today,
+            [new SaveWorkerRequest(ivan, 80m), new SaveWorkerRequest(petar, null), new SaveWorkerRequest(partner, null)],
+            Item("Плочки", 1m, Unit.Piece, 105m));
+
+        var before = await GetSummaryAsync(owner, siteId);
+        await factory.MakePartnerAsync(owner, petar);
+        var after = await GetSummaryAsync(owner, siteId);
+        var all = await GetSummariesAsync(owner);
+
+        Assert.Equal((80m, 1, 25m), (before.WorkerCost, before.WorkerOpenCount, before.Net));
+        Assert.Equal((80m, 0, 25m), (after.WorkerCost, after.WorkerOpenCount, after.Net));
+        Assert.Equal((80m, 0, 25m), (all.Totals.WorkerCost, all.Totals.WorkerOpenCount, all.Totals.Net));
+    }
+
+    // A day on wages („надник“, рунд 31): two partners at 150 and a worker at 120; 3 days × 150 = 450 earned.
+    // The partners' pay is a cost like the worker's; nobody is „за уточняване“.
+    [Fact]
+    public async Task PartnersWithAPay_CountInTheCost_AndInTheirEarned()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var siteId = await CreateSiteAsync(owner, "Професорът");
+        var iva = await CreatePersonAsync(owner, "Ива");
+        var georgi = await CreatePersonAsync(owner, "Георги");
+        var ivan = await CreatePersonAsync(owner, "Иван");
+        await factory.MakePartnerAsync(owner, iva);
+        await factory.MakePartnerAsync(owner, georgi);
+        await CreateDayWithWorkersAsync(
+            owner,
+            siteId,
+            Today,
+            [new SaveWorkerRequest(iva, 150m), new SaveWorkerRequest(georgi, 150m), new SaveWorkerRequest(ivan, 120m)],
+            Item("Надник", 3m, Unit.Day, 150m));
+
+        var summary = await GetSummaryAsync(owner, siteId);
+        var all = await GetSummariesAsync(owner);
+        var people = (await owner.GetFromJsonAsync<PersonResponse[]>("/api/people", Json))!;
+
+        Assert.Equal((450m, 420m, 0, 30m), (summary.Earned, summary.WorkerCost, summary.WorkerOpenCount, summary.Net));
+        Assert.Equal((450m, 420m, 0, 30m), (all.Totals.Earned, all.Totals.WorkerCost, all.Totals.WorkerOpenCount, all.Totals.Net));
+        var row = Assert.Single(all.Sites);
+        Assert.Equal((420m, 0, 30m), (row.WorkerCost, row.WorkerOpenCount, row.Net));
+        var partner = people.Single(p => p.Id == iva);
+        Assert.Equal((150m, true), (partner.Earned, partner.IsPartner));
+        Assert.Equal(120m, people.Single(p => p.Id == ivan).Earned);
+    }
+
+    // The totals sum the sites' cost, open count and net; a site that costs more than it earned lowers the net.
+    [Fact]
+    public async Task Summaries_WorkerCostPerSite_AndTotals()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var bath = await CreateSiteAsync(owner, "Баня");
+        var kitchen = await CreateSiteAsync(owner, "Кухня");
+        var ivan = await CreatePersonAsync(owner, "Иван");
+        var petar = await CreatePersonAsync(owner, "Петър");
+        await CreateDayWithWorkersAsync(
+            owner,
+            bath,
+            Today.AddDays(-1),
+            [new SaveWorkerRequest(ivan, 80m), new SaveWorkerRequest(petar, null)],
+            Item("Шпакловка", 10m, Unit.SquareMeter, 10m));
+        await CreateDayWithWorkersAsync(
+            owner,
+            bath,
+            Today,
+            [new SaveWorkerRequest(ivan, 80m)],
+            Item("Боя", 1m, Unit.Piece, null));
+        await CreateDayWithWorkersAsync(
+            owner,
+            kitchen,
+            Today,
+            [new SaveWorkerRequest(ivan, 60m), new SaveWorkerRequest(petar, 60m)],
+            Item("Плочки", 1m, Unit.Piece, 100m));
+
+        var summaries = await GetSummariesAsync(owner);
+
+        var bySite = summaries.Sites.ToDictionary(s => s.SiteId);
+        Assert.Equal(new SiteSummaryListResponse(bath, 100m, 0m, 100m, 1, 160m, 1, -60m), bySite[bath]);
+        Assert.Equal(new SiteSummaryListResponse(kitchen, 100m, 0m, 100m, 0, 120m, 0, -20m), bySite[kitchen]);
+        Assert.Equal(new SummaryTotalsResponse(200m, 0m, 200m, 0m, 0, 1, 280m, 1, -80m), summaries.Totals);
+        Assert.Equal(summaries.Sites.Sum(s => s.Net), summaries.Totals.Net);
+    }
+
     [Fact]
     public async Task Summaries_WithoutSites_IsEmptyWithZeroTotals()
     {
@@ -175,7 +300,7 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
         var summaries = await GetSummariesAsync(owner);
 
         Assert.Empty(summaries.Sites);
-        Assert.Equal(new SummaryTotalsResponse(0m, 0m, 0m, 0m, 0, 0), summaries.Totals);
+        Assert.Equal(new SummaryTotalsResponse(0m, 0m, 0m, 0m, 0, 0, 0m, 0, 0m), summaries.Totals);
     }
 
     // "summaries" is not a guid, so it never reaches GET /api/sites/{id:guid} (which would be a 404 "Няма такъв обект.").
@@ -193,7 +318,7 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
         var body = JsonNode.Parse(await summaries.Content.ReadAsStringAsync())!;
         var totals = body["totals"]!.AsObject();
         Assert.Equal(
-            ["earned", "paid", "owed", "overpaid", "overpaidSiteCount", "openCount"],
+            ["earned", "paid", "owed", "overpaid", "overpaidSiteCount", "openCount", "workerCost", "workerOpenCount", "net"],
             totals.Select(p => p.Key));
         Assert.Equal(HttpStatusCode.OK, site.StatusCode);
         Assert.Equal(siteId, (await site.Content.ReadFromJsonAsync<SiteResponse>(Json))!.Id);
@@ -261,6 +386,27 @@ public class SummaryEndpointsTests(AtlasApiFactory factory)
             new SaveWorkDayRequest(date, null, null, items),
             Json);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    private static async Task CreateDayWithWorkersAsync(
+        HttpClient owner,
+        Guid siteId,
+        DateOnly date,
+        IReadOnlyList<SaveWorkerRequest> workers,
+        params SaveWorkItemRequest[] items)
+    {
+        var response = await owner.PostAsJsonAsync(
+            $"/api/sites/{siteId}/workdays",
+            new SaveWorkDayRequest(date, null, null, items, workers),
+            Json);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    private static async Task<Guid> CreatePersonAsync(HttpClient owner, string name)
+    {
+        var response = await owner.PostAsJsonAsync("/api/people", new SavePersonRequest(name, null, null, true), Json);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<PersonResponse>(Json))!.Id;
     }
 
     private static async Task CreatePaymentAsync(HttpClient owner, Guid siteId, decimal amount)

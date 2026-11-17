@@ -179,4 +179,45 @@ public class SaveWorkDayRequestValidatorTests
         var result = Validate(Day(title: " " + new string('т', 200) + " ", note: "   "));
         Assert.True(result.IsValid, string.Join("; ", result.Errors));
     }
+
+    private static SaveWorkDayRequest WithWorkers(params SaveWorkerRequest[] workers)
+        => Day() with { Workers = workers };
+
+    [Fact]
+    public void Workers_WithAndWithoutPay_AreValid()
+    {
+        var result = Validate(WithWorkers(new(Guid.NewGuid(), 80m), new(Guid.NewGuid(), null), new(Guid.NewGuid(), 85.50m)));
+        Assert.True(result.IsValid, string.Join("; ", result.Errors));
+    }
+
+    [Fact]
+    public void SamePersonTwice_IsInvalid_OnWorkers()
+    {
+        var id = Guid.NewGuid();
+
+        var error = SingleError(Validate(WithWorkers(new(id, 80m), new(Guid.NewGuid(), null), new(id, 70m))), "Workers");
+
+        Assert.Equal(WorkDayRules.WorkerTwiceMessage, error.ErrorMessage);
+        Assert.Equal("Човекът е избран два пъти.", WorkDayRules.WorkerTwiceMessage);
+    }
+
+    [Theory]
+    [InlineData("0", MoneyRules.MustBePositiveMessage)]
+    [InlineData("100000.01", MoneyRules.TooLargeMessage)]
+    [InlineData("80.555", MoneyRules.TooManyDecimalsMessage)]
+    public void BadPay_IsInvalid_OnThatWorkersPay(string pay, string message)
+    {
+        var error = SingleError(
+            Validate(WithWorkers(
+                new(Guid.NewGuid(), 80m),
+                new(Guid.NewGuid(), decimal.Parse(pay, CultureInfo.InvariantCulture)))),
+            "Workers[1].Pay");
+        Assert.Equal(message, error.ErrorMessage);
+    }
+
+    [Fact]
+    public void NullWorkerInTheList_IsInvalid()
+    {
+        Assert.False(Validate(WithWorkers([null!])).IsValid);
+    }
 }

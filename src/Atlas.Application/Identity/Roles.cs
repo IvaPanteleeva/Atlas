@@ -12,4 +12,7 @@ public static class Roles
     public const string ClientViewer = "ClientViewer";
 
     public static readonly IReadOnlyList<string> All = [Owner, Manager, ClientViewer];
+
+    // A person linked to a profile with one of these roles is a partner („съдружник“, CLAUDE.md "Разход за хора").
+    public static readonly IReadOnlyList<string> Partner = [Owner, Manager];
 }

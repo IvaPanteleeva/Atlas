@@ -62,6 +62,9 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("PersonId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("text");
 
@@ -88,6 +91,10 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("PersonId")
+                        .IsUnique()
+                        .HasFilter("\"PersonId\" IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -153,6 +160,10 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("DailyRate")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<bool>("IsCrew")
                         .HasColumnType("boolean");
@@ -341,6 +352,10 @@ namespace Atlas.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("PersonId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Pay")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.HasKey("WorkDayId", "PersonId");
 
@@ -531,7 +546,14 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Atlas.Infrastructure.Entities.Person", "Person")
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Company");
+
+                    b.Navigation("Person");
                 });
 
             modelBuilder.Entity("Atlas.Infrastructure.Entities.ClientPayment", b =>

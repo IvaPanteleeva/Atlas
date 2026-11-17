@@ -46,14 +46,14 @@ public class PersonEndpointsTests(AtlasApiFactory factory)
 
         var response = await owner.PostAsJsonAsync(
             "/api/people",
-            new SavePersonRequest("  Иван Петров  ", "   ", "  Плочки  ", IsCrew: true),
+            new SavePersonRequest("  Иван Петров  ", "   ", "  Плочки  ", IsCrew: true, DailyRate: 85.50m),
             Json);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var person = await response.Content.ReadFromJsonAsync<PersonResponse>(Json);
         Assert.NotNull(person);
         Assert.Equal($"/api/people/{person.Id}", response.Headers.Location?.OriginalString);
-        Assert.Equal(new PersonResponse(person.Id, "Иван Петров", null, "Плочки", true, 0, null), person);
+        Assert.Equal(new PersonResponse(person.Id, "Иван Петров", null, "Плочки", true, 0, null, 85.50m, 0m, false, null), person);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class PersonEndpointsTests(AtlasApiFactory factory)
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var updated = await response.Content.ReadFromJsonAsync<PersonResponse>(Json);
-        Assert.Equal(new PersonResponse(person.Id, "Иван П.", null, null, false, 0, null), updated);
+        Assert.Equal(new PersonResponse(person.Id, "Иван П.", null, null, false, 0, null, null, 0m, false, null), updated);
     }
 
     [Fact]
@@ -176,6 +176,37 @@ public class PersonEndpointsTests(AtlasApiFactory factory)
         Assert.Equal((1, (DateOnly?)twoDaysAgo), (people[1].DayCount, people[1].LastWorkDate));
     }
 
+    // CLAUDE.md "Разход за хора": „изкарал“ = Σ the person's pay over all their days (days without a pay add nothing).
+    [Fact]
+    public async Task Earned_SumsThePayOverAllSites_DailyRateIsReturned()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var ivan = await CreatePersonAsync(owner, Person("Иван") with { DailyRate = 80m });
+        var bath = await CreateSiteAsync(owner, "Баня");
+        var kitchen = await CreateSiteAsync(owner, "Кухня");
+        await CreateDayAsync(owner, bath, Today.AddDays(-2), [new SaveWorkerRequest(ivan.Id, 80m)]);
+        await CreateDayAsync(owner, kitchen, Today.AddDays(-2), [new SaveWorkerRequest(ivan.Id, 40.50m)]);
+        await CreateDayAsync(owner, bath, Today.AddDays(-1), [new SaveWorkerRequest(ivan.Id, null)]);
+
+        var person = Assert.Single((await owner.GetFromJsonAsync<PersonResponse[]>("/api/people", Json))!);
+
+        Assert.Equal((2, (DateOnly?)Today.AddDays(-1), (decimal?)80m, 120.50m), (person.DayCount, person.LastWorkDate, person.DailyRate, person.Earned));
+    }
+
+    [Fact]
+    public async Task BadDailyRate_Returns400OnDailyRate()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+
+        var response = await owner.PostAsJsonAsync("/api/people", Person("Иван") with { DailyRate = 0m }, Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.Equal(["dailyRate"], problem?.Errors.Keys);
+    }
+
     [Fact]
     public async Task Manager_SeesNotes_CreatesAndUpdates_ButCannotDelete()
     {
@@ -192,7 +223,7 @@ public class PersonEndpointsTests(AtlasApiFactory factory)
 
         Assert.Equal(HttpStatusCode.OK, list.StatusCode);
         var person = Assert.Single((await list.Content.ReadFromJsonAsync<PersonResponse[]>(Json))!);
-        Assert.Equal(new PersonResponse(ivan.Id, "Иван", "0888", "плочки", true, 0, null), person);
+        Assert.Equal(new PersonResponse(ivan.Id, "Иван", "0888", "плочки", true, 0, null, null, 0m, false, null), person);
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
         Assert.Equal("бояджия", (await create.Content.ReadFromJsonAsync<PersonResponse>(Json))!.Note);
         Assert.Equal(HttpStatusCode.OK, update.StatusCode);
@@ -238,7 +269,10 @@ public class PersonEndpointsTests(AtlasApiFactory factory)
         return (await response.Content.ReadFromJsonAsync<SiteResponse>(Json))!.Id;
     }
 
-    private static async Task CreateDayAsync(HttpClient client, Guid siteId, DateOnly date, params Guid[] workerIds)
+    private static Task CreateDayAsync(HttpClient client, Guid siteId, DateOnly date, params Guid[] workerIds)
+        => CreateDayAsync(client, siteId, date, [.. workerIds.Select(id => new SaveWorkerRequest(id, null))]);
+
+    private static async Task CreateDayAsync(HttpClient client, Guid siteId, DateOnly date, SaveWorkerRequest[] workers)
     {
         var response = await client.PostAsJsonAsync(
             $"/api/sites/{siteId}/workdays",
@@ -247,7 +281,7 @@ public class PersonEndpointsTests(AtlasApiFactory factory)
                 null,
                 null,
                 [new SaveWorkItemRequest(null, null, "Плочки", 1m, Unit.Piece, 10m, false)],
-                workerIds),
+                workers),
             Json);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }

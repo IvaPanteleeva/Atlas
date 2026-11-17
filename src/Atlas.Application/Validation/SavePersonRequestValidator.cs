@@ -25,5 +25,10 @@ public sealed class SavePersonRequestValidator : AbstractValidator<SavePersonReq
             .MaximumLength(PersonRules.NoteMaxLength)
             .OverridePropertyName("Note")
             .WithName("Бележка");
+
+        this.RuleFor(r => r.DailyRate)
+            .Cascade(CascadeMode.Stop)
+            .Money()
+            .WithName("Дневна ставка");
     }
 }

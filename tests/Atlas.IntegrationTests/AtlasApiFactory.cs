@@ -113,6 +113,15 @@ public sealed class AtlasApiFactory : WebApplicationFactory<Program>, IAsyncLife
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    // Makes the person a partner: a new login profile (Manager by default) linked to the person through the API.
+    public async Task<Guid> MakePartnerAsync(HttpClient owner, Guid personId, string role = "Manager")
+    {
+        var user = await CreateUserAsync($"partner-{Guid.NewGuid():N}"[..20], "user-password", role);
+        var response = await owner.PutAsJsonAsync($"/api/users/{user.Id}/person", new { personId });
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        return user.Id;
+    }
+
     // A client whose cookie container holds the login cookie of the given user.
     public async Task<HttpClient> CreateLoggedInClientAsync(string userName, string password)
     {

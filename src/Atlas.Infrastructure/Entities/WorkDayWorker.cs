@@ -11,4 +11,8 @@ public class WorkDayWorker
     public Guid PersonId { get; set; }
 
     public Person? Person { get; set; }
+
+    // What the person gets for this day: a copy (filled from the daily rate by the form, may be changed).
+    // Null = „за уточняване“: not in the worker cost, counted apart (CLAUDE.md "Разход за хора").
+    public decimal? Pay { get; set; }
 }

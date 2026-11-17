@@ -10,10 +10,16 @@ namespace Atlas.Application.Summaries;
 /// <param name="Overpaid">„Надплатено“: sum of the overpayments (−Remaining where Remaining is below 0).</param>
 /// <param name="OverpaidSiteCount">Number of sites with Remaining below 0.</param>
 /// <param name="OpenCount">Items without a price or flagged NeedsReview, on all sites.</param>
+/// <param name="WorkerCost">„Разход за хора“ over all sites.</param>
+/// <param name="WorkerOpenCount">People-days without a pay, on all sites.</param>
+/// <param name="Net">„Остава за нас“: sum of the sites' Net (= Earned − WorkerCost); may be negative.</param>
 public sealed record SummaryTotalsResponse(
     decimal Earned,
     decimal Paid,
     decimal Owed,
     decimal Overpaid,
     int OverpaidSiteCount,
-    int OpenCount);
+    int OpenCount,
+    decimal WorkerCost,
+    int WorkerOpenCount,
+    decimal Net);

@@ -8,11 +8,12 @@ namespace Atlas.Application.WorkDays;
 /// <param name="Title">Up to 200 characters.</param>
 /// <param name="Note">Internal note, up to 2000 characters.</param>
 /// <param name="Items">1 to 50 items, kept in this order.</param>
-/// <param name="WorkerIds">Who worked (person ids); repeated ids count once. New workers must be crew; people already
-/// on the day stay even if they are no longer crew. Null keeps the day's workers as they are; [] removes them.</param>
+/// <param name="Workers">Who worked, each person once, with the pay for the day. New workers must be crew; people
+/// already on the day may stay even if they are no longer crew. Null keeps the day's workers (and their pay) as they
+/// are; [] removes them.</param>
 public sealed record SaveWorkDayRequest(
     DateOnly? Date,
     string? Title,
     string? Note,
     IReadOnlyList<SaveWorkItemRequest>? Items,
-    IReadOnlyList<Guid>? WorkerIds = null);
+    IReadOnlyList<SaveWorkerRequest>? Workers = null);

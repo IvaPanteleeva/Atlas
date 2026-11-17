@@ -3,10 +3,13 @@ namespace Atlas.Infrastructure.Persistence.Repositories;
 using Atlas.Application.Common;
 using Atlas.Application.Contracts;
 using Atlas.Application.Identity;
+using Atlas.Application.People;
 using Atlas.Application.Users;
+using Atlas.Application.WorkDays;
 using Atlas.Infrastructure.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 // Users are created through UserManager (password hash, Identity's user name rules),
 // which works on the same scoped AtlasDbContext as this repository.
@@ -44,12 +47,33 @@ public sealed class UserRepository(AtlasDbContext data, UserManager<AtlasUser> u
             }
         }
 
+        string? personName = null;
+        if (request.PersonId is { } personId)
+        {
+            var person = await this.CheckPersonAsync(personId, exceptUserId: null, cancellationToken);
+            if (!person.Succeeded)
+            {
+                return person.Error;
+            }
+
+            personName = person.Data;
+        }
+
         // User and role together: a user without a role would be able to sign in but see nothing.
         await using var transaction = await this.Data.Database.BeginTransactionAsync(cancellationToken);
 
-        var user = new AtlasUser { UserName = request.UserName, CompanyId = request.CompanyId };
+        var user = new AtlasUser { UserName = request.UserName, CompanyId = request.CompanyId, PersonId = request.PersonId };
 
-        var created = await userManager.CreateAsync(user, request.Password);
+        IdentityResult created;
+        try
+        {
+            created = await userManager.CreateAsync(user, request.Password);
+        }
+        catch (DbUpdateException ex) when (PersonRaceError(ex) is { } error)
+        {
+            return error;
+        }
+
         if (!created.Succeeded)
         {
             return ToError(created);
@@ -63,7 +87,7 @@ public sealed class UserRepository(AtlasDbContext data, UserManager<AtlasUser> u
 
         await transaction.CommitAsync(cancellationToken);
 
-        return new UserResponse(user.Id, user.UserName, request.Role, user.CompanyId, companyName);
+        return new UserResponse(user.Id, user.UserName, request.Role, user.CompanyId, companyName, user.PersonId, personName);
     }
 
     public async Task<IReadOnlyList<UserResponse>> ListAsync(CancellationToken cancellationToken)
@@ -77,9 +101,56 @@ public sealed class UserRepository(AtlasDbContext data, UserManager<AtlasUser> u
                     user.UserName!,
                     role.Name!,
                     user.CompanyId,
-                    user.Company != null ? user.Company.Name : null))
+                    user.Company != null ? user.Company.Name : null,
+                    user.PersonId,
+                    user.Person != null ? user.Person.Name : null))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+
+    public async Task<Result<UserResponse>> LinkPersonAsync(
+        Guid id,
+        LinkPersonRequest request,
+        CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(id.ToString());
+        if (user is null)
+        {
+            return Error.NotFound(NotFoundMessage);
+        }
+
+        if (request.PersonId is { } personId)
+        {
+            if (await userManager.IsInRoleAsync(user, Roles.ClientViewer))
+            {
+                return FieldError("personId", UserRules.ClientViewerPersonMessage);
+            }
+
+            var person = await this.CheckPersonAsync(personId, exceptUserId: id, cancellationToken);
+            if (!person.Succeeded)
+            {
+                return person.Error;
+            }
+        }
+
+        // Unlinking or relinking changes who is a partner from now on; the pays stored on the days stay.
+        user.PersonId = request.PersonId;
+        IdentityResult updated;
+        try
+        {
+            updated = await userManager.UpdateAsync(user);
+        }
+        catch (DbUpdateException ex) when (PersonRaceError(ex) is { } error)
+        {
+            return error;
+        }
+
+        if (!updated.Succeeded)
+        {
+            return ToError(updated);
+        }
+
+        return (await this.ListAsync(cancellationToken)).Single(u => u.Id == id);
+    }
 
     public async Task<Result> SetPasswordAsync(
         Guid id,
@@ -160,6 +231,49 @@ public sealed class UserRepository(AtlasDbContext data, UserManager<AtlasUser> u
             .ToDictionary(group => group.Key, group => group.Select(e => e.Description).ToArray());
 
         return Error.Validation(fieldErrors);
+    }
+
+    // Between the person checks and the save: the unique index on PersonId (linked to another profile meanwhile)
+    // or the FK (the person was deleted). Other database errors are not handled here.
+    private static Error? PersonRaceError(DbUpdateException ex)
+        => ex.InnerException switch
+        {
+            PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: var name }
+                when name?.Contains("PersonId", StringComparison.Ordinal) == true
+                => Error.Conflict(UserRules.PersonTakenMessage),
+            PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation, ConstraintName: var name }
+                when name?.Contains("People", StringComparison.Ordinal) == true
+                => FieldError("personId", PersonRules.NotFoundMessage),
+            _ => null,
+        };
+
+    // The person exists, is crew and is not linked to another profile. Returns the person's name.
+    private async Task<Result<string>> CheckPersonAsync(
+        Guid personId,
+        Guid? exceptUserId,
+        CancellationToken cancellationToken)
+    {
+        var person = await this.Data.People
+            .AsNoTracking()
+            .Where(p => p.Id == personId)
+            .Select(p => new { p.Name, p.IsCrew })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (person is null)
+        {
+            return FieldError("personId", PersonRules.NotFoundMessage);
+        }
+
+        if (!person.IsCrew)
+        {
+            return FieldError("personId", WorkDayRules.WorkerNotCrewMessage);
+        }
+
+        if (await this.Data.Users.AnyAsync(u => u.PersonId == personId && u.Id != exceptUserId, cancellationToken))
+        {
+            return Error.Conflict(UserRules.PersonTakenMessage);
+        }
+
+        return person.Name;
     }
 
     private static Error FieldError(string field, string message)

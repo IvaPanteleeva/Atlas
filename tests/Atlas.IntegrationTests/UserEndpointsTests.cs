@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Atlas.Application.Auth;
 using Atlas.Application.Identity;
+using Atlas.Application.People;
 using Atlas.Application.Users;
 using Atlas.Infrastructure.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -51,7 +52,7 @@ public class UserEndpointsTests(AtlasApiFactory factory)
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var user = await response.Content.ReadFromJsonAsync<UserResponse>();
         Assert.NotNull(user);
-        Assert.Equal(new UserResponse(user.Id, "ivan", Roles.Manager, null, null), user);
+        Assert.Equal(new UserResponse(user.Id, "ivan", Roles.Manager, null, null, null, null), user);
         Assert.Equal($"/api/users/{user.Id}", response.Headers.Location?.OriginalString);
 
         var manager = await factory.CreateLoggedInClientAsync("ivan", Password);
@@ -347,6 +348,159 @@ public class UserEndpointsTests(AtlasApiFactory factory)
         Assert.Equal(HttpStatusCode.Forbidden, delete.StatusCode);
     }
 
+    // Partners (CLAUDE.md "Разход за хора"): a crew member linked to an Owner or Manager profile.
+    [Fact]
+    public async Task Create_WithPerson_LinksIt_AndThePersonBecomesAPartner()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var iva = await CreatePersonAsync(owner, "Ива");
+
+        var response = await owner.PostAsJsonAsync("/api/users", Request("iva", Roles.Manager) with { PersonId = iva.Id });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var user = await response.Content.ReadFromJsonAsync<UserResponse>();
+        Assert.Equal((iva.Id, "Ива"), (user!.PersonId, user.PersonName));
+        var person = await GetPersonAsync(owner, iva.Id);
+        Assert.Equal((true, "iva"), (person.IsPartner, person.LinkedUserName));
+        var users = await owner.GetFromJsonAsync<UserResponse[]>("/api/users");
+        Assert.Equal((iva.Id, "Ива"), users!.Where(u => u.UserName == "iva").Select(u => (u.PersonId, u.PersonName)).Single());
+    }
+
+    [Fact]
+    public async Task LinkAndUnlink_ChangesIsPartnerFromThenOn()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var iva = await CreatePersonAsync(owner, "Ива");
+        var user = await factory.CreateUserAsync("iva", Password, Roles.Owner);
+
+        var link = await owner.PutAsJsonAsync($"/api/users/{user.Id}/person", new LinkPersonRequest(iva.Id));
+        var linked = await GetPersonAsync(owner, iva.Id);
+        var unlink = await owner.PutAsJsonAsync($"/api/users/{user.Id}/person", new LinkPersonRequest(null));
+        var unlinked = await GetPersonAsync(owner, iva.Id);
+
+        Assert.Equal(HttpStatusCode.OK, link.StatusCode);
+        Assert.Equal(
+            new UserResponse(user.Id, "iva", Roles.Owner, null, null, iva.Id, "Ива"),
+            await link.Content.ReadFromJsonAsync<UserResponse>());
+        Assert.Equal((true, "iva"), (linked.IsPartner, linked.LinkedUserName));
+        Assert.Equal(HttpStatusCode.OK, unlink.StatusCode);
+        Assert.Equal(
+            new UserResponse(user.Id, "iva", Roles.Owner, null, null, null, null),
+            await unlink.Content.ReadFromJsonAsync<UserResponse>());
+        Assert.Equal((false, (string?)null), (unlinked.IsPartner, unlinked.LinkedUserName));
+    }
+
+    [Fact]
+    public async Task Link_UnknownPerson_Returns400_Contact_Returns400()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var contact = await CreatePersonAsync(owner, "Петър", isCrew: false);
+        var user = await factory.CreateUserAsync("iva", Password, Roles.Manager);
+
+        var unknown = await owner.PutAsJsonAsync($"/api/users/{user.Id}/person", new LinkPersonRequest(Guid.NewGuid()));
+        var notCrew = await owner.PutAsJsonAsync($"/api/users/{user.Id}/person", new LinkPersonRequest(contact.Id));
+        var createNotCrew = await owner.PostAsJsonAsync("/api/users", Request("petar", Roles.Manager) with { PersonId = contact.Id });
+
+        Assert.Equal(["Няма такъв човек."], (await AssertFieldError(unknown, "personId")).Errors["personId"]);
+        Assert.Equal(["Човекът не е от екипа."], (await AssertFieldError(notCrew, "personId")).Errors["personId"]);
+        Assert.Equal(["Човекът не е от екипа."], (await AssertFieldError(createNotCrew, "personId")).Errors["personId"]);
+        Assert.DoesNotContain(
+            await owner.GetFromJsonAsync<UserResponse[]>("/api/users") ?? [],
+            u => u.UserName == "petar");
+    }
+
+    [Fact]
+    public async Task Link_PersonOfAnotherProfile_Returns409()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var iva = await CreatePersonAsync(owner, "Ива");
+        var first = await factory.CreateUserAsync("iva", Password, Roles.Manager);
+        var second = await factory.CreateUserAsync("iva2", Password, Roles.Manager);
+        await owner.PutAsJsonAsync($"/api/users/{first.Id}/person", new LinkPersonRequest(iva.Id));
+
+        var again = await owner.PutAsJsonAsync($"/api/users/{first.Id}/person", new LinkPersonRequest(iva.Id));
+        var other = await owner.PutAsJsonAsync($"/api/users/{second.Id}/person", new LinkPersonRequest(iva.Id));
+        var create = await owner.PostAsJsonAsync("/api/users", Request("iva3", Roles.Manager) with { PersonId = iva.Id });
+
+        Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        await AssertProblem(other, HttpStatusCode.Conflict, "Човекът вече е свързан с друг профил.");
+        await AssertProblem(create, HttpStatusCode.Conflict, "Човекът вече е свързан с друг профил.");
+    }
+
+    [Fact]
+    public async Task Link_ClientViewer_Returns400()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var iva = await CreatePersonAsync(owner, "Ива");
+        var client = await factory.CreateUserAsync("zhenistroy", Password, Roles.ClientViewer, CompanyConfiguration.ZhenistroyId);
+
+        var response = await owner.PutAsJsonAsync($"/api/users/{client.Id}/person", new LinkPersonRequest(iva.Id));
+
+        Assert.Equal(
+            ["Възложителят не може да е човек от екипа."],
+            (await AssertFieldError(response, "personId")).Errors["personId"]);
+    }
+
+    [Fact]
+    public async Task Link_UnknownUser_Returns404_AndManagerGets403()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var iva = await CreatePersonAsync(owner, "Ива");
+        var managerUser = await factory.CreateUserAsync("manager", Password, Roles.Manager);
+        var manager = await factory.CreateLoggedInClientAsync("manager", Password);
+
+        var unknown = await owner.PutAsJsonAsync($"/api/users/{Guid.NewGuid()}/person", new LinkPersonRequest(iva.Id));
+        var forbidden = await manager.PutAsJsonAsync($"/api/users/{managerUser.Id}/person", new LinkPersonRequest(iva.Id));
+
+        await AssertProblem(unknown, HttpStatusCode.NotFound, "Няма такъв профил.");
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeletePerson_LinkedToAProfile_Returns409()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var iva = await CreatePersonAsync(owner, "Ива");
+        await factory.MakePartnerAsync(owner, iva.Id);
+
+        var response = await owner.DeleteAsync($"/api/people/{iva.Id}");
+
+        await AssertProblem(response, HttpStatusCode.Conflict, "Човекът е свързан с профил за вход.");
+    }
+
+    // Deleting the profile ends the link; the person stays, no longer a partner.
+    [Fact]
+    public async Task DeleteUser_LinkedToAPerson_KeepsThePerson()
+    {
+        await factory.ResetDatabaseAsync();
+        var owner = await factory.CreateOwnerClientAsync();
+        var iva = await CreatePersonAsync(owner, "Ива");
+        var userId = await factory.MakePartnerAsync(owner, iva.Id);
+
+        var response = await owner.DeleteAsync($"/api/users/{userId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var person = await GetPersonAsync(owner, iva.Id);
+        Assert.Equal((false, (string?)null), (person.IsPartner, person.LinkedUserName));
+    }
+
+    private static async Task<PersonResponse> CreatePersonAsync(HttpClient owner, string name, bool isCrew = true)
+    {
+        var response = await owner.PostAsJsonAsync("/api/people", new SavePersonRequest(name, null, null, isCrew));
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<PersonResponse>())!;
+    }
+
+    private static async Task<PersonResponse> GetPersonAsync(HttpClient owner, Guid id)
+        => (await owner.GetFromJsonAsync<PersonResponse[]>("/api/people"))!.Single(p => p.Id == id);
+
     private static async Task AssertProblem(HttpResponseMessage response, HttpStatusCode status, string title)
     {
         Assert.Equal(status, response.StatusCode);
@@ -357,11 +511,12 @@ public class UserEndpointsTests(AtlasApiFactory factory)
     private static CreateUserRequest Request(string userName, string role, Guid? companyId = null)
         => new(userName, Password, role, companyId);
 
-    private static async Task AssertFieldError(HttpResponseMessage response, string field)
+    private static async Task<ValidationProblemDetails> AssertFieldError(HttpResponseMessage response, string field)
     {
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
         Assert.NotNull(problem);
         Assert.Contains(field, problem.Errors.Keys);
+        return problem;
     }
 }

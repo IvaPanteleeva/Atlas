@@ -34,7 +34,9 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
             .ThenByDescending(d => d.Id)
             .ToListAsync(cancellationToken);
 
-        return Result<IReadOnlyList<WorkDayResponse>>.SuccessWith([.. days.Select(ToResponse)]);
+        var partners = await this.Data.PartnerPersonIdSetAsync(cancellationToken);
+
+        return Result<IReadOnlyList<WorkDayResponse>>.SuccessWith([.. days.Select(d => ToResponse(d, partners))]);
     }
 
     public async Task<Result<WorkDayResponse>> GetAsync(Guid siteId, Guid id, CancellationToken cancellationToken)
@@ -46,7 +48,12 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
             .AsSplitQuery()
             .FirstOrDefaultAsync(d => d.Id == id && d.SiteId == siteId, cancellationToken);
 
-        return day is null ? Error.NotFound(NotFoundMessage) : ToResponse(day);
+        if (day is null)
+        {
+            return Error.NotFound(NotFoundMessage);
+        }
+
+        return ToResponse(day, await this.Data.PartnerPersonIdSetAsync(cancellationToken));
     }
 
     public async Task<Result<WorkDayResponse>> CreateAsync(
@@ -67,14 +74,14 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
 
         var day = new WorkDay { SiteId = siteId, CreatedAt = timeProvider.GetUtcNow() };
 
-        var workers = await this.LoadWorkersAsync(day, request.WorkerIds ?? [], cancellationToken);
+        var workers = await this.LoadWorkersAsync(day, request.Workers ?? [], cancellationToken);
         if (workers.Error is { } workerError)
         {
             return workerError;
         }
 
         this.Apply(day, request);
-        SetWorkers(day, workers.People);
+        SetWorkers(day, workers.Chosen);
 
         // The same save as the day: a Lead site becomes Active (CLAUDE.md "Обекти и фирми").
         site.OnWorkDayAdded();
@@ -105,9 +112,9 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
             return error;
         }
 
-        // No WorkerIds (null) keeps the day's workers; a list (also empty) replaces them.
-        var workers = request.WorkerIds is { } workerIds
-            ? await this.LoadWorkersAsync(day, workerIds, cancellationToken)
+        // No Workers (null) keeps the day's workers and their pay; a list (also empty) replaces them.
+        var workers = request.Workers is { } requested
+            ? await this.LoadWorkersAsync(day, requested, cancellationToken)
             : null;
         if (workers?.Error is { } workerError)
         {
@@ -118,7 +125,7 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
         this.Apply(day, request);
         if (workers is not null)
         {
-            SetWorkers(day, workers.People);
+            SetWorkers(day, workers.Chosen);
         }
 
         return await this.SaveAsync(siteId, day, request, cancellationToken);
@@ -143,7 +150,7 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
     private static IReadOnlyList<SaveWorkItemRequest> Items(SaveWorkDayRequest request)
         => request.Items ?? [];
 
-    private static WorkDayResponse ToResponse(WorkDay day)
+    private static WorkDayResponse ToResponse(WorkDay day, IReadOnlySet<Guid> partners)
     {
         var items = day.Items
             .OrderBy(i => i.Position)
@@ -165,7 +172,7 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
 
         // By name, like the people list; the id keeps two people with the same name in a stable order.
         var workers = day.Workers
-            .Select(w => new WorkerResponse(w.PersonId, w.Person!.Name))
+            .Select(w => new WorkerResponse(w.PersonId, w.Person!.Name, w.Pay, partners.Contains(w.PersonId)))
             .OrderBy(w => w.Name, StringComparer.InvariantCulture)
             .ThenBy(w => w.Id)
             .ToList();
@@ -230,32 +237,39 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
         }
     }
 
-    // The day's workers become exactly these people: the links of the others are deleted, new ones added.
-    private static void SetWorkers(WorkDay day, IReadOnlyList<Person> people)
+    // The day's workers become exactly these people with these pays: the links of the others are deleted,
+    // the kept ones get the pay as sent, the new ones are added. The pay is a copy (CLAUDE.md "Разход за хора").
+    private static void SetWorkers(WorkDay day, IReadOnlyList<ChosenWorker> chosen)
     {
-        var wanted = people.Select(p => p.Id).ToHashSet();
-        day.Workers.RemoveAll(w => !wanted.Contains(w.PersonId));
+        var wanted = chosen.ToDictionary(c => c.Person.Id);
+        day.Workers.RemoveAll(w => !wanted.ContainsKey(w.PersonId));
+
+        foreach (var worker in day.Workers)
+        {
+            worker.Pay = wanted[worker.PersonId].Pay;
+        }
 
         var current = day.Workers.Select(w => w.PersonId).ToHashSet();
-        foreach (var person in people.Where(p => !current.Contains(p.Id)))
+        foreach (var c in chosen.Where(c => !current.Contains(c.Person.Id)))
         {
-            day.Workers.Add(new WorkDayWorker { PersonId = person.Id, Person = person });
+            day.Workers.Add(new WorkDayWorker { PersonId = c.Person.Id, Person = c.Person, Pay = c.Pay });
         }
     }
 
-    // The people named in the request (each id once). A person already on the day may stay even when no longer crew;
-    // a new one must be crew; an unknown id is an error (WorkDayRules.WorkerError). Errors are a 400 on workerIds.
+    // The people named in the request (the validator lets each person in only once). A person already on the day may
+    // stay even when no longer crew; a new one must be crew; an unknown id is an error (WorkDayRules.WorkerError).
+    // Errors are a 400 on workers.
     private async Task<Workers> LoadWorkersAsync(
         WorkDay day,
-        IReadOnlyList<Guid> workerIds,
+        IReadOnlyList<SaveWorkerRequest> requested,
         CancellationToken cancellationToken)
     {
-        var ids = workerIds.Distinct().ToList();
-        if (ids.Count == 0)
+        if (requested.Count == 0)
         {
             return Workers.None;
         }
 
+        var ids = requested.Select(w => w.PersonId).Distinct().ToList();
         var people = await this.Data.People
             .Where(p => ids.Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, cancellationToken);
@@ -270,10 +284,11 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
             .ToArray();
         if (messages.Length > 0)
         {
-            return new Workers([], Error.Validation(new Dictionary<string, string[]> { ["workerIds"] = messages }));
+            return new Workers([], Error.Validation(new Dictionary<string, string[]> { ["workers"] = messages }));
         }
 
-        return new Workers([.. ids.Select(id => people[id])], null);
+        // Partners may have a pay for the day too („надник“, CLAUDE.md "Разход за хора", рунд 31); it is optional.
+        return new Workers([.. requested.Select(w => new ChosenWorker(people[w.PersonId], w.Pay))], null);
     }
 
     // An unknown service is a 400 on that item (items[i].serviceId); null when all services exist.
@@ -340,20 +355,22 @@ public sealed class WorkDayRepository(AtlasDbContext data, TimeProvider timeProv
             {
                 return Error.Validation(new Dictionary<string, string[]>
                 {
-                    ["workerIds"] = [WorkDayRules.WorkerNotFoundMessage],
+                    ["workers"] = [WorkDayRules.WorkerNotFoundMessage],
                 });
             }
 
             throw;
         }
 
-        return ToResponse(day);
+        return ToResponse(day, await this.Data.PartnerPersonIdSetAsync(cancellationToken));
     }
 
     private async Task<bool> SiteExistsAsync(Guid siteId, CancellationToken cancellationToken)
         => await this.Data.Sites.AnyAsync(s => s.Id == siteId, cancellationToken);
 
-    private sealed record Workers(IReadOnlyList<Person> People, Error? Error)
+    private sealed record ChosenWorker(Person Person, decimal? Pay);
+
+    private sealed record Workers(IReadOnlyList<ChosenWorker> Chosen, Error? Error)
     {
         public static readonly Workers None = new([], null);
     }

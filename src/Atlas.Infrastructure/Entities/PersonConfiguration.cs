@@ -1,5 +1,6 @@
 namespace Atlas.Infrastructure.Entities;
 
+using Atlas.Application.Common;
 using Atlas.Application.People;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -17,5 +18,7 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
             .HasMaxLength(PersonRules.NameMaxLength);
         builder.Property(p => p.Phone).HasMaxLength(PersonRules.PhoneMaxLength);
         builder.Property(p => p.Note).HasMaxLength(PersonRules.NoteMaxLength);
+
+        builder.Property(p => p.DailyRate).HasPrecision(MoneyRules.Precision, MoneyRules.Scale);
     }
 }

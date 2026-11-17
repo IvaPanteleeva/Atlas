@@ -40,6 +40,13 @@ public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserReq
             .When(r => r.Role == Roles.ClientViewer)
             .WithMessage("Фирмата е задължителна за ClientViewer.");
 
+        // A client profile is never one of our people. Whether the person exists, is crew and is free is
+        // UserRepository's job (it needs the database).
+        this.RuleFor(r => r.PersonId)
+            .Null()
+            .When(r => r.Role == Roles.ClientViewer)
+            .WithMessage(UserRules.ClientViewerPersonMessage);
+
         this.RuleFor(r => r.CompanyId)
             .Null()
             .When(r => r.Role is Roles.Owner or Roles.Manager)

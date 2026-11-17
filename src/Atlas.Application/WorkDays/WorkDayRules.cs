@@ -60,6 +60,8 @@ public static class WorkDayRules
 
     public const string WorkerNotCrewMessage = "Човекът не е от екипа.";
 
+    public const string WorkerTwiceMessage = "Човекът е избран два пъти.";
+
     // Who may be put on a day (CLAUDE.md "Хора и профили"): isCrew is null for an unknown person.
     // A new worker must be crew; someone already on the day stays even when no longer crew (old days keep their people).
     public static string? WorkerError(bool isOnTheDay, bool? isCrew)

@@ -39,5 +39,23 @@ public sealed class SaveWorkDayRequestValidator : AbstractValidator<SaveWorkDayR
             .NotNull()
             .WithName("Позиция")
             .SetValidator(new SaveWorkItemRequestValidator());
+
+        // Each person once. Whether they exist and are crew is WorkDayRepository's job (400 on workers).
+        this.RuleFor(r => r.Workers)
+            .Must(workers => workers is null
+                || workers.Where(w => w is not null).Select(w => w.PersonId).Distinct().Count()
+                    == workers.Count(w => w is not null))
+            .WithMessage(WorkDayRules.WorkerTwiceMessage);
+
+        // The pay for the day: the price rule (more than 0, up to 100 000, 2 decimals) or empty („за уточняване“).
+        this.RuleForEach(r => r.Workers)
+            .Cascade(CascadeMode.Stop)
+            .NotNull()
+            .WithName("Човек")
+            .ChildRules(worker => worker
+                .RuleFor(w => w.Pay)
+                .Cascade(CascadeMode.Stop)
+                .Money()
+                .WithName("Сума за деня"));
     }
 }

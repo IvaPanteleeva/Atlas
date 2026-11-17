@@ -106,4 +106,24 @@ public class CreateUserRequestValidatorTests
     {
         Assert.Empty(InvalidFields(new CreateUserRequest("иван.петров", "password", Roles.Manager, null)));
     }
+
+    [Theory]
+    [InlineData(Roles.Owner)]
+    [InlineData(Roles.Manager)]
+    public void OwnerOrManager_WithPerson_IsValid(string role)
+    {
+        Assert.Empty(InvalidFields(new CreateUserRequest("ivan", "password", role, null, Guid.NewGuid())));
+    }
+
+    [Fact]
+    public void ClientViewer_WithPerson_IsInvalid_OnPersonId()
+    {
+        var errors = new CreateUserRequestValidator()
+            .Validate(new CreateUserRequest("zhenistroy", "password", Roles.ClientViewer, CompanyId, Guid.NewGuid()))
+            .Errors;
+
+        var error = Assert.Single(errors);
+        Assert.Equal("PersonId", error.PropertyName);
+        Assert.Equal("Възложителят не може да е човек от екипа.", error.ErrorMessage);
+    }
 }

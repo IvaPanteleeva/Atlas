@@ -11,12 +11,15 @@ public class SiteSummaryCalculatorTests
     private static SummaryItem Item(string quantity, string? rate, bool needsReview = false)
         => new(D(quantity), rate is null ? null : D(rate), needsReview);
 
+    private static SummaryWorker W(decimal? pay, bool isPartner = false)
+        => new(pay, isPartner);
+
     [Fact]
     public void Empty_IsAllZero()
     {
         var summary = SiteSummaryCalculator.Calculate([], []);
 
-        Assert.Equal(new SiteSummary(0m, 0m, 0m, 0), summary);
+        Assert.Equal(new SiteSummary(0m, 0m, 0m, 0, 0m, 0, 0m), summary);
     }
 
     [Fact]
@@ -70,7 +73,7 @@ public class SiteSummaryCalculatorTests
     {
         var summary = SiteSummaryCalculator.Calculate([Item("10", "7.50"), Item("5", "6.00")], [50m, 20m]);
 
-        Assert.Equal(new SiteSummary(105m, 70m, 35m, 0), summary);
+        Assert.Equal(new SiteSummary(105m, 70m, 35m, 0, 0m, 0, 105m), summary);
     }
 
     [Fact]
@@ -87,7 +90,7 @@ public class SiteSummaryCalculatorTests
     {
         var summary = SiteSummaryCalculator.Calculate([], [40m]);
 
-        Assert.Equal(new SiteSummary(0m, 40m, -40m, 0), summary);
+        Assert.Equal(new SiteSummary(0m, 40m, -40m, 0, 0m, 0, 0m), summary);
     }
 
     // The site's sum equals the sum of its days' sums (both are sums of the same rounded items).
@@ -113,12 +116,12 @@ public class SiteSummaryCalculatorTests
     {
         var total = SiteSummaryCalculator.Total(
         [
-            new SiteSummary(400m, 100m, 300m, 2),
-            new SiteSummary(110m, 0m, 110m, 1),
-            new SiteSummary(105m, 120m, -15m, 0),
+            new SiteSummary(400m, 100m, 300m, 2, 0m, 0, 400m),
+            new SiteSummary(110m, 0m, 110m, 1, 0m, 0, 110m),
+            new SiteSummary(105m, 120m, -15m, 0, 0m, 0, 105m),
         ]);
 
-        Assert.Equal(new SummaryTotals(615m, 220m, 410m, 15m, 1, 3), total);
+        Assert.Equal(new SummaryTotals(615m, 220m, 410m, 15m, 1, 3, 0m, 0, 615m), total);
     }
 
     [Fact]
@@ -126,11 +129,11 @@ public class SiteSummaryCalculatorTests
     {
         var total = SiteSummaryCalculator.Total(
         [
-            new SiteSummary(105m, 105m, 0m, 0),
-            new SiteSummary(20m, 20m, 0m, 1),
+            new SiteSummary(105m, 105m, 0m, 0, 0m, 0, 105m),
+            new SiteSummary(20m, 20m, 0m, 1, 0m, 0, 20m),
         ]);
 
-        Assert.Equal(new SummaryTotals(125m, 125m, 0m, 0m, 0, 1), total);
+        Assert.Equal(new SummaryTotals(125m, 125m, 0m, 0m, 0, 1, 0m, 0, 125m), total);
     }
 
     [Fact]
@@ -138,17 +141,87 @@ public class SiteSummaryCalculatorTests
     {
         var total = SiteSummaryCalculator.Total(
         [
-            new SiteSummary(10m, 40m, -30m, 0),
-            new SiteSummary(105m, 120m, -15m, 0),
-            new SiteSummary(50m, 0m, 50m, 0),
+            new SiteSummary(10m, 40m, -30m, 0, 0m, 0, 10m),
+            new SiteSummary(105m, 120m, -15m, 0, 0m, 0, 105m),
+            new SiteSummary(50m, 0m, 50m, 0, 0m, 0, 50m),
         ]);
 
-        Assert.Equal(new SummaryTotals(165m, 160m, 50m, 45m, 2, 0), total);
+        Assert.Equal(new SummaryTotals(165m, 160m, 50m, 45m, 2, 0, 0m, 0, 165m), total);
     }
 
     [Fact]
     public void Total_OfNoSites_IsAllZero()
     {
-        Assert.Equal(new SummaryTotals(0m, 0m, 0m, 0m, 0, 0), SiteSummaryCalculator.Total([]));
+        Assert.Equal(new SummaryTotals(0m, 0m, 0m, 0m, 0, 0, 0m, 0, 0m), SiteSummaryCalculator.Total([]));
+    }
+
+    // CLAUDE.md "Разход за хора": the pay of each person-day; an empty pay is not in the cost but is counted.
+    [Fact]
+    public void WorkerCost_SumsThePays_EmptyPayIsCountedApart_NetIsEarnedMinusCost()
+    {
+        var summary = SiteSummaryCalculator.Calculate([Item("1", "105")], [50m], [W(80m), W(null)]);
+
+        Assert.Equal(new SiteSummary(105m, 50m, 55m, 0, 80m, 1, 25m), summary);
+    }
+
+    // „Остава за нас“ comes from Earned, not from Paid, and may be negative.
+    [Fact]
+    public void Net_MayBeNegative_AndDoesNotDependOnPayments()
+    {
+        var summary = SiteSummaryCalculator.Calculate([Item("1", "100")], [100m], [W(80m), W(70.50m)]);
+
+        Assert.Equal((150.50m, 0, -50.50m), (summary.WorkerCost, summary.WorkerOpenCount, summary.Net));
+    }
+
+    [Fact]
+    public void WithoutWorkers_NetIsEarned()
+    {
+        var summary = SiteSummaryCalculator.Calculate([Item("2", "10")], [], []);
+
+        Assert.Equal((0m, 0, 20m), (summary.WorkerCost, summary.WorkerOpenCount, summary.Net));
+    }
+
+    [Fact]
+    public void Total_SumsWorkerCostOpenCountAndNet_NegativeNetLowersTheTotal()
+    {
+        var total = SiteSummaryCalculator.Total(
+        [
+            new SiteSummary(105m, 0m, 105m, 0, 80m, 1, 25m),
+            new SiteSummary(100m, 0m, 100m, 0, 150m, 0, -50m),
+            new SiteSummary(0m, 0m, 0m, 0, 0m, 2, 0m),
+        ]);
+
+        Assert.Equal((230m, 3, -25m), (total.WorkerCost, total.WorkerOpenCount, total.Net));
+    }
+
+    // Partners („съдружници“) have no pay: they are not „за уточняване“. „Остава за нас“ is their profit.
+    [Fact]
+    public void Partner_WithoutPay_IsNotCountedAsOpen_NorAsCost()
+    {
+        var summary = SiteSummaryCalculator.Calculate([Item("1", "105")], [], [W(80m), W(null, isPartner: true), W(null)]);
+
+        Assert.Equal((80m, 1, 25m), (summary.WorkerCost, summary.WorkerOpenCount, summary.Net));
+    }
+
+    // Someone who became a partner later keeps the pay stored on their old days (a copy): it stays in the cost.
+    [Fact]
+    public void Partner_WithAPayStoredBefore_StaysInTheCost()
+    {
+        var summary = SiteSummaryCalculator.Calculate([Item("1", "105")], [], [W(50m, isPartner: true)]);
+
+        Assert.Equal((50m, 0, 55m), (summary.WorkerCost, summary.WorkerOpenCount, summary.Net));
+    }
+
+    // A partner's pay for the day („надник“, рунд 31) is optional: filled in, it is a cost like a worker's;
+    // empty, it is not „за уточняване“.
+    [Fact]
+    public void Partner_WithAPay_IsCost_WithoutPay_IsNotOpen()
+    {
+        var summary = SiteSummaryCalculator.Calculate(
+            [Item("3", "150")],
+            [],
+            [W(150m, isPartner: true), W(null, isPartner: true), W(120m)]);
+
+        Assert.Equal((270m, 0, 180m), (summary.WorkerCost, summary.WorkerOpenCount, summary.Net));
     }
 }

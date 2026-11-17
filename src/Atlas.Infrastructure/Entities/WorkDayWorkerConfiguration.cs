@@ -1,5 +1,6 @@
 namespace Atlas.Infrastructure.Entities;
 
+using Atlas.Application.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,6 +10,8 @@ public sealed class WorkDayWorkerConfiguration : IEntityTypeConfiguration<WorkDa
     {
         // A person is on a day at most once.
         builder.HasKey(w => new { w.WorkDayId, w.PersonId });
+
+        builder.Property(w => w.Pay).HasPrecision(MoneyRules.Precision, MoneyRules.Scale);
 
         // The links belong to the day: deleting the day deletes them, not the people.
         builder.HasOne(w => w.WorkDay)

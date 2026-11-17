@@ -17,15 +17,17 @@ public sealed class PersonRepository(AtlasDbContext data) : DataRepository<Perso
             .ThenBy(p => p.Id)
             .ToListAsync(cancellationToken);
 
-        // SQL brings each person's dates once; counting them is PersonRules.WorkStats' job.
-        var dates = (await this.Data.WorkDayWorkers
+        // SQL brings one row per person-day (date and pay); counting the distinct dates and summing the pay is
+        // PersonRules' job.
+        var days = (await this.Data.WorkDayWorkers
                 .AsNoTracking()
-                .Select(w => new { w.PersonId, w.WorkDay!.Date })
-                .Distinct()
+                .Select(w => new { w.PersonId, w.WorkDay!.Date, w.Pay })
                 .ToListAsync(cancellationToken))
-            .ToLookup(w => w.PersonId, w => w.Date);
+            .ToLookup(w => w.PersonId, w => new PersonDay(w.Date, w.Pay));
 
-        return [.. people.Select(p => ToResponse(p, dates[p.Id]))];
+        var links = await this.LinksAsync(null, cancellationToken);
+
+        return [.. people.Select(p => ToResponse(p, days[p.Id], links.GetValueOrDefault(p.Id)))];
     }
 
     public async Task<Result<PersonResponse>> CreateAsync(SavePersonRequest request, CancellationToken cancellationToken)
@@ -35,8 +37,8 @@ public sealed class PersonRepository(AtlasDbContext data) : DataRepository<Perso
         await this.AddAsync(person, cancellationToken);
         await this.SaveAsync(cancellationToken);
 
-        // A new person has no days yet.
-        return ToResponse(person, []);
+        // A new person has no days and no profile yet.
+        return ToResponse(person, [], null);
     }
 
     public async Task<Result<PersonResponse>> UpdateAsync(
@@ -54,13 +56,15 @@ public sealed class PersonRepository(AtlasDbContext data) : DataRepository<Perso
         Apply(person, request);
         await this.SaveAsync(cancellationToken);
 
-        var dates = await this.Data.WorkDayWorkers
+        var days = await this.Data.WorkDayWorkers
             .AsNoTracking()
             .Where(w => w.PersonId == id)
-            .Select(w => w.WorkDay!.Date)
+            .Select(w => new PersonDay(w.WorkDay!.Date, w.Pay))
             .ToListAsync(cancellationToken);
 
-        return ToResponse(person, dates);
+        var links = await this.LinksAsync(id, cancellationToken);
+
+        return ToResponse(person, days, links.GetValueOrDefault(id));
     }
 
     public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken)
@@ -77,6 +81,12 @@ public sealed class PersonRepository(AtlasDbContext data) : DataRepository<Perso
             return Error.Conflict(PersonRules.HasWorkDaysMessage);
         }
 
+        // A person linked to a login profile is unlinked there first (PUT /api/users/{id}/person).
+        if (await this.Data.Users.AnyAsync(u => u.PersonId == id, cancellationToken))
+        {
+            return Error.Conflict(PersonRules.LinkedToUserMessage);
+        }
+
         this.Delete(person);
 
         try
@@ -88,8 +98,12 @@ public sealed class PersonRepository(AtlasDbContext data) : DataRepository<Perso
             SqlState: PostgresErrorCodes.ForeignKeyViolation,
         })
         {
-            // The person was put on a work day between the check and the save (the FK is Restrict).
-            return Error.Conflict(PersonRules.HasWorkDaysMessage);
+            // The person was put on a work day or linked to a profile between the checks and the save
+            // (both FKs are Restrict).
+            this.Data.ChangeTracker.Clear();
+            return Error.Conflict(await this.Data.WorkDayWorkers.AnyAsync(w => w.PersonId == id, cancellationToken)
+                ? PersonRules.HasWorkDaysMessage
+                : PersonRules.LinkedToUserMessage);
         }
 
         return Result.Success;
@@ -101,11 +115,15 @@ public sealed class PersonRepository(AtlasDbContext data) : DataRepository<Perso
         person.Phone = PersonRules.NormalizeOptional(request.Phone);
         person.Note = PersonRules.NormalizeOptional(request.Note);
         person.IsCrew = request.IsCrew;
+
+        // Only new days are suggested the new rate; the days already saved keep their pay.
+        person.DailyRate = request.DailyRate;
     }
 
-    private static PersonResponse ToResponse(Person person, IEnumerable<DateOnly> workDates)
+    private static PersonResponse ToResponse(Person person, IEnumerable<PersonDay> days, Link? link)
     {
-        var (dayCount, lastWorkDate) = PersonRules.WorkStats(workDates);
+        var list = days as IReadOnlyCollection<PersonDay> ?? [.. days];
+        var (dayCount, lastWorkDate) = PersonRules.WorkStats(list.Select(d => d.Date));
 
         return new PersonResponse(
             person.Id,
@@ -114,6 +132,29 @@ public sealed class PersonRepository(AtlasDbContext data) : DataRepository<Perso
             person.Note,
             person.IsCrew,
             dayCount,
-            lastWorkDate);
+            lastWorkDate,
+            person.DailyRate,
+            PersonRules.Earned(list.Select(d => d.Pay)),
+            link?.IsPartner ?? false,
+            link?.UserName);
     }
+
+    // The login profile linked to each person (all, or one), and whether its role makes the person a partner.
+    private async Task<Dictionary<Guid, Link>> LinksAsync(Guid? personId, CancellationToken cancellationToken)
+    {
+        var partners = await this.Data.PartnerPersonIdSetAsync(cancellationToken);
+
+        var users = await this.Data.Users
+            .AsNoTracking()
+            .Where(u => u.PersonId != null && (personId == null || u.PersonId == personId))
+            .Select(u => new { PersonId = u.PersonId!.Value, u.UserName })
+            .ToListAsync(cancellationToken);
+
+        return users.ToDictionary(u => u.PersonId, u => new Link(u.UserName!, partners.Contains(u.PersonId)));
+    }
+
+    private sealed record Link(string UserName, bool IsPartner);
+
+    // One day the person worked: its date and the pay for it.
+    private sealed record PersonDay(DateOnly Date, decimal? Pay);
 }

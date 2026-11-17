@@ -5,7 +5,7 @@ using Atlas.Application.Summaries;
 using Atlas.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 
-// The sums are computed on every request, never stored (CLAUDE.md "Правила за домейна").
+// The sums are computed on every request, never stored (CLAUDE.md "Правила за домейна", "Разход за хора").
 // SQL brings only quantity, price and flag of the items and the payment sums; the rounding per item and
 // the sums are SiteSummaryCalculator's job, the same rule as WorkDayResponse.Total.
 public sealed class SiteSummaryRepository(AtlasDbContext data) : DataRepository<Site>(data), ISiteSummaryRepository
@@ -34,7 +34,15 @@ public sealed class SiteSummaryRepository(AtlasDbContext data) : DataRepository<
             .Select(i => new SummaryItem(i.Quantity, i.Rate, i.NeedsReview))
             .ToListAsync(cancellationToken);
 
-        var summary = SiteSummaryCalculator.Calculate(items, [site.Paid]);
+        // One pay per person-day on the site (null = „за уточняване“, unless the person is now a partner).
+        var partners = this.Data.PartnerPersonIds();
+        var pays = await this.Data.WorkDayWorkers
+            .AsNoTracking()
+            .Where(w => w.WorkDay!.SiteId == siteId)
+            .Select(w => new SummaryWorker(w.Pay, partners.Contains(w.PersonId)))
+            .ToListAsync(cancellationToken);
+
+        var summary = SiteSummaryCalculator.Calculate(items, [site.Paid], pays);
 
         return new SiteSummaryResponse(
             summary.Earned,
@@ -42,7 +50,10 @@ public sealed class SiteSummaryRepository(AtlasDbContext data) : DataRepository<
             summary.Remaining,
             summary.OpenCount,
             site.WorkDayCount,
-            site.LastWorkDate);
+            site.LastWorkDate,
+            summary.WorkerCost,
+            summary.WorkerOpenCount,
+            summary.Net);
     }
 
     public async Task<SiteSummariesResponse> ListAsync(CancellationToken cancellationToken)
@@ -65,10 +76,18 @@ public sealed class SiteSummaryRepository(AtlasDbContext data) : DataRepository<
             .Select(g => new { SiteId = g.Key, Paid = g.Sum(p => p.Amount) })
             .ToDictionaryAsync(p => p.SiteId, p => p.Paid, cancellationToken);
 
+        var partners = this.Data.PartnerPersonIds();
+        var pays = (await this.Data.WorkDayWorkers
+                .AsNoTracking()
+                .Select(w => new { w.WorkDay!.SiteId, w.Pay, IsPartner = partners.Contains(w.PersonId) })
+                .ToListAsync(cancellationToken))
+            .ToLookup(w => w.SiteId, w => new SummaryWorker(w.Pay, w.IsPartner));
+
         var sites = siteIds
             .Select(id => (Id: id, Summary: SiteSummaryCalculator.Calculate(
                 items[id],
-                paid.TryGetValue(id, out var sum) ? [sum] : [])))
+                paid.TryGetValue(id, out var sum) ? [sum] : [],
+                pays[id])))
             .ToList();
 
         // The totals come from the sites' sums, so the bar always matches the rows (Owed and Overpaid kept apart).
@@ -81,12 +100,18 @@ public sealed class SiteSummaryRepository(AtlasDbContext data) : DataRepository<
                 totals.Owed,
                 totals.Overpaid,
                 totals.OverpaidSiteCount,
-                totals.OpenCount),
+                totals.OpenCount,
+                totals.WorkerCost,
+                totals.WorkerOpenCount,
+                totals.Net),
             [.. sites.Select(s => new SiteSummaryListResponse(
                 s.Id,
                 s.Summary.Earned,
                 s.Summary.Paid,
                 s.Summary.Remaining,
-                s.Summary.OpenCount))]);
+                s.Summary.OpenCount,
+                s.Summary.WorkerCost,
+                s.Summary.WorkerOpenCount,
+                s.Summary.Net))]);
     }
 }
