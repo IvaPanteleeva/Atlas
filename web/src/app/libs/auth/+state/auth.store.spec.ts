@@ -5,8 +5,8 @@ import { LoginRequest, Me } from '../auth.model';
 import { AuthService } from '../auth.service';
 import { AuthStore } from './auth.store';
 
-const owner: Me = { id: '1', userName: 'iva', role: 'Owner', companyId: null };
-const client: Me = { id: '2', userName: 'jeni', role: 'ClientViewer', companyId: 'c1' };
+const owner: Me = { id: '1', userName: 'iva', role: 'Owner', companyId: null, personId: null };
+const client: Me = { id: '2', userName: 'jeni', role: 'ClientViewer', companyId: 'c1', personId: null };
 
 function httpError(status: number, error: unknown = null) {
     return throwError(() => new HttpErrorResponse({ status, error }));
@@ -62,7 +62,7 @@ describe('AuthStore', () => {
     });
 
     it('Manager is staff but not Owner', async () => {
-        fake.meResult = of({ id: '3', userName: 'gosho', role: 'Manager', companyId: null });
+        fake.meResult = of({ id: '3', userName: 'gosho', role: 'Manager', companyId: null, personId: null });
 
         await store.loadMe();
 

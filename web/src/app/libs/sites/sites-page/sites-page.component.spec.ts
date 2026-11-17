@@ -52,7 +52,10 @@ describe('SitesPageComponent', () => {
                 { provide: ANIMATION_MODULE_TYPE, useValue: 'NoopAnimations' },
                 {
                     provide: AuthService,
-                    useValue: { me: (): Observable<Me> => of({ id: '1', userName: 'iva', role, companyId: null }) },
+                    useValue: {
+                        me: (): Observable<Me> =>
+                            of({ id: '1', userName: 'iva', role, companyId: null, personId: null }),
+                    },
                 },
                 { provide: SitesService, useValue: fake },
                 { provide: CompaniesService, useValue: companies },

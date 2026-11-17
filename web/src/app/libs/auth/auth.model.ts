@@ -7,6 +7,8 @@ export interface Me {
     userName: string;
     role: Role;
     companyId: string | null;
+    /** The crew person linked to this profile (for „Мои“ in „Задачи“); null = not linked. */
+    personId: string | null;
 }
 
 export interface LoginRequest {

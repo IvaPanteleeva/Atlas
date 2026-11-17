@@ -52,7 +52,7 @@ describe('ShellComponent', () => {
 
     async function render(url: string, role: Role | null = 'Owner', userName = 'iva') {
         if (role) {
-            fake.meResult = of({ id: '1', userName, role, companyId: null });
+            fake.meResult = of({ id: '1', userName, role, companyId: null, personId: null });
         }
         await TestBed.inject(AuthStore).loadMe();
         const harness = await RouterTestingHarness.create();

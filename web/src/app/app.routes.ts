@@ -44,9 +44,9 @@ export const routes: Routes = [
             {
                 path: 'tasks',
                 title: 'Задачи · Атлас',
-                data: { title: 'Задачи' },
                 canActivate: [staffGuard],
-                loadComponent: placeholderPage,
+                loadComponent: () =>
+                    import('./libs/tasks/tasks-page/tasks-page.component').then((m) => m.TasksPageComponent),
             },
             {
                 path: 'services',

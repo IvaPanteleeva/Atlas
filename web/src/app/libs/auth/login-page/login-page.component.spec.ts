@@ -13,7 +13,7 @@ import { AuthService } from '../auth.service';
 import { SitesService } from '../../sites/sites.service';
 
 class FakeAuthService {
-    loginResult: Observable<Me> = of({ id: '1', userName: 'iva', role: 'Owner', companyId: null });
+    loginResult: Observable<Me> = of({ id: '1', userName: 'iva', role: 'Owner', companyId: null, personId: null });
 
     me(): Observable<Me> {
         return throwError(() => new HttpErrorResponse({ status: 401 }));
@@ -44,7 +44,7 @@ describe('LoginPageComponent', () => {
     const path = () => TestBed.inject(Location).path();
 
     async function signIn(url: string, role: Role = 'Owner') {
-        fake.loginResult = of({ id: '1', userName: 'iva', role, companyId: null });
+        fake.loginResult = of({ id: '1', userName: 'iva', role, companyId: null, personId: null });
         const harness = await RouterTestingHarness.create();
         await harness.navigateByUrl(url);
         const element = harness.fixture.nativeElement as HTMLElement;

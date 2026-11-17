@@ -34,6 +34,10 @@ import { CreateSitePriceRequest, SitePrice } from '../../site-prices/site-price.
 import { SitePriceFormComponent } from '../../site-prices/site-price-form/site-price-form.component';
 import { SitePriceListComponent } from '../../site-prices/site-price-list/site-price-list.component';
 import { SummariesStore } from '../../summaries/+state/summaries.store';
+import { TasksStore } from '../../tasks/+state/tasks.store';
+import { NewTask, SiteTask } from '../../tasks/task.model';
+import { TaskAddComponent } from '../../tasks/task-add/task-add.component';
+import { TaskAssignment, TaskListComponent, TaskRename, TaskToggle } from '../../tasks/task-list/task-list.component';
 import { WorkDaysStore } from '../../work-days/+state/work-days.store';
 import { SaveWorkDayRequest, WorkDay } from '../../work-days/work-day.model';
 import { WorkDayFormComponent } from '../../work-days/work-day-form/work-day-form.component';
@@ -44,7 +48,8 @@ import { SiteFormComponent } from '../site-form/site-form.component';
 import { SiteHeaderComponent } from '../site-header/site-header.component';
 
 /**
- * Smart page for one site (/sites/:id): header, "Работни дни", "Плащания" and "Цени за обекта".
+ * Smart page for one site (/sites/:id): header, "Контакти на обекта", "Задачи", "Работни дни", "Плащания" and
+ * "Цени за обекта".
  * Owner and Manager see and edit everything here; only Owner deletes (sites, days, payments, prices, contacts).
  */
 @Component({
@@ -66,6 +71,8 @@ import { SiteHeaderComponent } from '../site-header/site-header.component';
         PaymentListComponent,
         SiteContactListComponent,
         SiteContactFormComponent,
+        TaskListComponent,
+        TaskAddComponent,
         // Only used inside @defer: the forms (and the date picker) are separate lazy chunks.
         WorkDayFormComponent,
         PaymentFormComponent,
@@ -88,6 +95,7 @@ export class SiteDetailPageComponent {
     protected readonly payments = inject(PaymentsStore);
     protected readonly people = inject(PeopleStore);
     protected readonly contacts = inject(SiteContactsStore);
+    protected readonly tasks = inject(TasksStore);
     private readonly router = inject(Router);
 
     protected readonly formOpen = signal(false);
@@ -101,6 +109,8 @@ export class SiteDetailPageComponent {
     protected readonly contactFormOpen = signal(false);
     /** The contact being edited; null = a new one. */
     protected readonly editingContact = signal<SiteContact | null>(null);
+    /** Changed after each added task: the add row clears its field. */
+    protected readonly tasksAdded = signal(0);
     protected readonly paymentFormOpen = signal(false);
     /** The payment being edited; null = a new one. */
     protected readonly editingPayment = signal<Payment | null>(null);
@@ -131,6 +141,7 @@ export class SiteDetailPageComponent {
                 this.contactFormOpen.set(false);
                 void this.store.loadOne(id);
                 void this.contacts.load(id);
+                void this.tasks.load({ siteId: id });
                 void this.workDays.load(id);
                 if (this.auth.isStaff()) {
                     void this.summaries.loadSite(id);
@@ -263,6 +274,28 @@ export class SiteDetailPageComponent {
         if (editing && (await this.contacts.remove(this.id(), editing.id))) {
             this.contactFormOpen.set(false);
         }
+    }
+
+    protected async addTask(task: NewTask): Promise<void> {
+        if (await this.tasks.create({ ...task, siteId: this.id() })) {
+            this.tasksAdded.update((count) => count + 1);
+        }
+    }
+
+    protected toggleTask({ task, done }: TaskToggle): void {
+        void this.tasks.setDone(task.id, done);
+    }
+
+    protected renameTask({ task, text }: TaskRename): void {
+        void this.tasks.update(task.id, { text, assigneeId: task.assigneeId });
+    }
+
+    protected assignTask({ task, assigneeId }: TaskAssignment): void {
+        void this.tasks.update(task.id, { text: task.text, assigneeId });
+    }
+
+    protected removeTask(task: SiteTask): void {
+        void this.tasks.remove(task.id);
     }
 
     protected openPaymentForm(payment: Payment | null): void {

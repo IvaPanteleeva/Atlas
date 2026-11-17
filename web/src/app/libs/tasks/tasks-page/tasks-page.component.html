@@ -1,0 +1,84 @@
+<div class="sec-head">
+    <h1>Задачи</h1>
+</div>
+
+<div class="filters" role="group" aria-label="Чии задачи">
+    <button
+        type="button"
+        class="chip"
+        [attr.aria-pressed]="filter().kind === 'all'"
+        (click)="filter.set({ kind: 'all' })"
+    >
+        Всички
+    </button>
+    @if (myPersonId()) {
+        <button
+            type="button"
+            class="chip"
+            [attr.aria-pressed]="filter().kind === 'mine'"
+            (click)="filter.set({ kind: 'mine' })"
+        >
+            Мои
+        </button>
+    }
+    @for (person of crewChips(); track person.id) {
+        <button
+            type="button"
+            class="chip"
+            [attr.aria-pressed]="isPerson(person.id)"
+            (click)="filter.set({ kind: 'person', personId: person.id })"
+        >
+            {{ person.name }}
+        </button>
+    }
+</div>
+
+@if (store.error(); as message) {
+    <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+}
+
+@if (store.loading() && !store.tasks().length) {
+    <p class="note">Зареждане…</p>
+} @else {
+    <section class="company" aria-labelledby="company-tasks-title">
+        <div class="sec-head">
+            <h2 id="company-tasks-title">Фирмата</h2>
+        </div>
+        <atlas-task-list
+            [tasks]="companyTasks()"
+            [crew]="people.crew()"
+            [canDelete]="auth.isOwner()"
+            (toggle)="toggle($event)"
+            (rename)="rename($event)"
+            (assign)="assign($event)"
+            (remove)="remove($event)"
+        >
+            <atlas-task-add
+                [crew]="people.crew()"
+                [defaultAssigneeId]="filterPersonId()"
+                [saving]="store.saving()"
+                [error]="store.fieldError()"
+                [resetKey]="added()"
+                (add)="addCompanyTask($event)"
+            />
+        </atlas-task-list>
+    </section>
+
+    @for (group of siteGroups(); track group.siteId) {
+        <section class="site" [attr.aria-labelledby]="'site-tasks-' + group.siteId">
+            <div class="sec-head">
+                <h2 [id]="'site-tasks-' + group.siteId">{{ group.siteName }}</h2>
+                <a class="to-site" [routerLink]="['/sites', group.siteId]">Към обекта →</a>
+            </div>
+            <atlas-task-list
+                [tasks]="group.tasks"
+                [crew]="people.crew()"
+                [canDelete]="auth.isOwner()"
+                (toggle)="toggle($event)"
+                (rename)="rename($event)"
+                (assign)="assign($event)"
+                (remove)="remove($event)"
+            />
+        </section>
+    }
+}

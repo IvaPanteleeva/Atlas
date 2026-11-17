@@ -8,7 +8,7 @@ import { authInterceptor } from './auth.interceptor';
 import { Me } from './auth.model';
 import { AuthService } from './auth.service';
 
-const owner: Me = { id: '1', userName: 'iva', role: 'Owner', companyId: null };
+const owner: Me = { id: '1', userName: 'iva', role: 'Owner', companyId: null, personId: null };
 
 describe('authInterceptor', () => {
     let http: HttpClient;

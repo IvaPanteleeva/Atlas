@@ -1,0 +1,113 @@
+@if (!tasks().length) {
+    <p class="empty">Няма задачи.</p>
+}
+
+@if (open().length) {
+    <ul class="tasks">
+        @for (task of open(); track task.id) {
+            <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: task }" />
+        }
+    </ul>
+}
+
+<ng-content />
+
+@if (shownDone().length) {
+    <ul class="tasks tasks--done">
+        @for (task of shownDone(); track task.id) {
+            <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: task }" />
+        }
+    </ul>
+    @if (done().length > shownDone().length) {
+        <button nz-button nzType="link" type="button" class="more" (click)="showAllDone.set(true)">
+            Покажи всички завършени ({{ done().length }})
+        </button>
+    }
+}
+
+<ng-template #row let-task>
+    <li class="task" [class.done]="task.done">
+        <label
+            nz-checkbox
+            class="check"
+            [nzChecked]="task.done"
+            [attr.aria-label]="(task.done ? 'Отвори пак: ' : 'Отметни: ') + task.text"
+            (nzCheckedChange)="toggle.emit({ task, done: $event })"
+        ></label>
+
+        <div class="body">
+            @if (editingId() === task.id) {
+                <input
+                    #editInput
+                    class="edit"
+                    type="text"
+                    enterkeyhint="done"
+                    aria-label="Текст на задачата"
+                    [maxLength]="maxLength"
+                    [value]="draft()"
+                    (input)="draft.set(editInput.value)"
+                    (keydown.enter)="finishEdit(task)"
+                    (keydown.escape)="cancelEdit()"
+                    (blur)="finishEdit(task)"
+                />
+            } @else if (task.done) {
+                <span class="text">{{ task.text }}</span>
+            } @else {
+                <button type="button" class="text" title="Промени текста" (click)="startEdit(task)">
+                    {{ task.text }}
+                </button>
+            }
+
+            @if (task.assigneeId || !task.done) {
+                <button
+                    type="button"
+                    class="assignee"
+                    [class.none]="!task.assigneeId"
+                    nz-dropdown
+                    nzTrigger="click"
+                    nzPlacement="bottomLeft"
+                    [nzDropdownMenu]="menu"
+                    [attr.aria-label]="task.assigneeId ? 'Отговорник: ' + task.assigneeName : 'Избери кой'"
+                >
+                    {{ task.assigneeId ? task.assigneeName : 'Кой?' }}
+                </button>
+                <nz-dropdown-menu #menu="nzDropdownMenu">
+                    <ul nz-menu class="assignee-menu">
+                        @for (option of options(task); track option.id) {
+                            <li
+                                nz-menu-item
+                                [nzSelected]="option.id === task.assigneeId"
+                                (click)="pick(task, option.id)"
+                            >
+                                {{ option.name }}
+                            </li>
+                        }
+                        @if (task.assigneeId) {
+                            <li nz-menu-item class="clear" (click)="pick(task, null)">Без отговорник</li>
+                        }
+                    </ul>
+                </nz-dropdown-menu>
+            }
+        </div>
+
+        @if (canDelete()) {
+            @if (confirmingId() === task.id) {
+                <button
+                    nz-button
+                    nzType="primary"
+                    nzDanger
+                    nzSize="small"
+                    type="button"
+                    class="confirm"
+                    (click)="requestRemove(task)"
+                >
+                    Потвърди изтриване
+                </button>
+            } @else {
+                <button type="button" class="remove" aria-label="Изтрий задачата" (click)="requestRemove(task)">
+                    <nz-icon nzType="close" nzTheme="outline" aria-hidden="true" />
+                </button>
+            }
+        }
+    </li>
+</ng-template>

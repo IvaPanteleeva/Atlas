@@ -16,7 +16,7 @@ class FakeAuthService {
     role: Role = 'Owner';
 
     me(): Observable<Me> {
-        return of({ id: '1', userName: 'iva', role: this.role, companyId: null });
+        return of({ id: '1', userName: 'iva', role: this.role, companyId: null, personId: null });
     }
 }
 

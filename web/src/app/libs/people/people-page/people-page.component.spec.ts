@@ -38,7 +38,10 @@ describe('PeoplePageComponent', () => {
                 { provide: ANIMATION_MODULE_TYPE, useValue: 'NoopAnimations' },
                 {
                     provide: AuthService,
-                    useValue: { me: (): Observable<Me> => of({ id: 'u1', userName: 'iva', role, companyId: null }) },
+                    useValue: {
+                        me: (): Observable<Me> =>
+                            of({ id: 'u1', userName: 'iva', role, companyId: null, personId: null }),
+                    },
                 },
                 { provide: PeopleService, useValue: people },
                 { provide: UsersService, useValue: users },

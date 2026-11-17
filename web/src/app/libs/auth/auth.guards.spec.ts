@@ -33,7 +33,7 @@ describe('auth guards', () => {
 
     async function signInAs(role: Role | null) {
         if (role) {
-            fake.meResult = of({ id: '1', userName: 'u', role, companyId: null });
+            fake.meResult = of({ id: '1', userName: 'u', role, companyId: null, personId: null });
         }
         await TestBed.inject(AuthStore).loadMe();
     }

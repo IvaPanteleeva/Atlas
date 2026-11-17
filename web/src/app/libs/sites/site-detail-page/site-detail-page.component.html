@@ -50,6 +50,38 @@
         }
     </section>
 
+    <section class="tasks" aria-labelledby="tasks-title">
+        <div class="sec-head">
+            <h2 id="tasks-title">
+                Задачи <span class="count num">{{ tasks.openCount() }}</span>
+            </h2>
+        </div>
+        @if (tasks.error(); as message) {
+            <nz-alert class="section-error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+        }
+        @if (tasks.loading() && !tasks.tasks().length) {
+            <p class="note">Зареждане…</p>
+        } @else {
+            <atlas-task-list
+                [tasks]="tasks.tasks()"
+                [crew]="people.crew()"
+                [canDelete]="auth.isOwner()"
+                (toggle)="toggleTask($event)"
+                (rename)="renameTask($event)"
+                (assign)="assignTask($event)"
+                (remove)="removeTask($event)"
+            >
+                <atlas-task-add
+                    [crew]="people.crew()"
+                    [saving]="tasks.saving()"
+                    [error]="tasks.fieldError()"
+                    [resetKey]="tasksAdded()"
+                    (add)="addTask($event)"
+                />
+            </atlas-task-list>
+        }
+    </section>
+
     <section class="work-days" aria-labelledby="work-days-title">
         <div class="sec-head">
             <h2 id="work-days-title">

@@ -1,0 +1,77 @@
+:host {
+    display: block;
+}
+
+// Prototype .sec-head: title on the left, action on the right.
+.sec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+
+    h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        overflow-wrap: anywhere;
+    }
+}
+
+// Filter chips; they wrap on a phone.
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 18px;
+}
+
+.chip {
+    min-height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+
+    &[aria-pressed='true'] {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: var(--surface);
+        font-weight: 600;
+    }
+}
+
+.site {
+    margin-top: 28px;
+}
+
+.to-site {
+    flex: none;
+    min-height: 36px;
+    padding: 8px 0;
+    color: var(--ink);
+    font-size: 13.5px;
+    text-decoration: underline;
+}
+
+.error {
+    margin-bottom: 12px;
+}
+
+.note {
+    color: var(--muted);
+}

@@ -1,0 +1,22 @@
+<form class="add" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <input
+        class="new-text"
+        type="text"
+        formControlName="text"
+        placeholder="Нова задача…"
+        aria-label="Нова задача"
+        autocomplete="off"
+        enterkeyhint="done"
+        [maxLength]="maxLength"
+    />
+    <nz-select class="who" formControlName="assigneeId" nzPlaceHolder="Кой?" aria-label="Кой?">
+        <nz-option [nzValue]="null" nzLabel="Никой" />
+        @for (person of crew(); track person.id) {
+            <nz-option [nzValue]="person.id" [nzLabel]="person.name" />
+        }
+    </nz-select>
+    <button nz-button nzType="primary" type="submit" class="submit" [nzLoading]="saving()">Добави</button>
+</form>
+@if (error(); as message) {
+    <div class="server-error" role="alert">{{ message }}</div>
+}

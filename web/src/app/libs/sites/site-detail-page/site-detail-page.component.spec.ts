@@ -23,6 +23,8 @@ import { SitePricesService } from '../../site-prices/site-prices.service';
 import { FakeSitePricesService, testSitePrice } from '../../site-prices/testing/fake-site-prices.service';
 import { SummariesService } from '../../summaries/summaries.service';
 import { FakeSummariesService, testSiteSummary } from '../../summaries/testing/fake-summaries.service';
+import { TasksService } from '../../tasks/tasks.service';
+import { FakeTasksService, testTask } from '../../tasks/testing/fake-tasks.service';
 import { SitesService } from '../sites.service';
 import { FakeSitesService, httpError, testSite } from '../testing/fake-sites.service';
 import { FakeWorkDaysService, testWorkDay } from '../../work-days/testing/fake-work-days.service';
@@ -37,6 +39,7 @@ describe('SiteDetailPageComponent', () => {
     let summaries: FakeSummariesService;
     let people: FakePeopleService;
     let contacts: FakeSiteContactsService;
+    let tasks: FakeTasksService;
     let role: Role;
 
     beforeAll(() => {
@@ -52,6 +55,7 @@ describe('SiteDetailPageComponent', () => {
         summaries = new FakeSummariesService();
         people = new FakePeopleService();
         contacts = new FakeSiteContactsService();
+        tasks = new FakeTasksService();
         role = 'Owner';
         TestBed.configureTestingModule({
             providers: [
@@ -61,7 +65,10 @@ describe('SiteDetailPageComponent', () => {
                 { provide: ANIMATION_MODULE_TYPE, useValue: 'NoopAnimations' },
                 {
                     provide: AuthService,
-                    useValue: { me: (): Observable<Me> => of({ id: '1', userName: 'iva', role, companyId: null }) },
+                    useValue: {
+                        me: (): Observable<Me> =>
+                            of({ id: '1', userName: 'iva', role, companyId: null, personId: null }),
+                    },
                 },
                 { provide: SitesService, useValue: fake },
                 { provide: CompaniesService, useValue: { list: () => of([{ id: 'c1', name: 'Женистрой' }]) } },
@@ -72,6 +79,7 @@ describe('SiteDetailPageComponent', () => {
                 { provide: SummariesService, useValue: summaries },
                 { provide: PeopleService, useValue: people },
                 { provide: SiteContactsService, useValue: contacts },
+                { provide: TasksService, useValue: tasks },
             ],
         });
     });
@@ -387,6 +395,75 @@ describe('SiteDetailPageComponent', () => {
         });
     });
 
+    describe('"Задачи"', () => {
+        const section = (page: HTMLElement) => page.querySelector<HTMLElement>('section.tasks')!;
+        const texts = (page: HTMLElement) =>
+            Array.from(section(page).querySelectorAll('li.task .text')).map((node) => node.textContent?.trim());
+
+        it('loads the tasks of the site after "Контакти на обекта", before "Работни дни", with the open count', async () => {
+            tasks.tasks = [
+                testTask({ id: 'a', text: 'Лепило' }),
+                testTask({ id: 'b', text: 'Кофи', done: true, doneAt: '2026-11-15T08:00:00Z' }),
+            ];
+
+            const { page } = await render();
+
+            expect(tasks.calls).toEqual(['list siteId=s1']);
+            const sections = Array.from(page.querySelectorAll('section')).map((s) => s.className);
+            expect(sections.slice(0, 3)).toEqual(['site-contacts', 'tasks', 'work-days']);
+            expect(section(page).querySelector('h2')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Задачи 1');
+            expect(texts(page)).toEqual(['Лепило', 'Кофи']);
+        });
+
+        it('shows the empty state with the add row', async () => {
+            const { page } = await render();
+
+            expect(section(page).textContent).toContain('Няма задачи.');
+            expect(section(page).querySelector('atlas-task-add input')).toBeTruthy();
+        });
+
+        it('adds a task to the site and clears the field', async () => {
+            const { harness, page } = await render();
+
+            const input = section(page).querySelector<HTMLInputElement>('input.new-text')!;
+            input.value = 'Да се купи лепило';
+            input.dispatchEvent(new Event('input'));
+            section(page).querySelector<HTMLFormElement>('atlas-task-add form')!.dispatchEvent(new Event('submit'));
+            await harness.fixture.whenStable();
+
+            expect(tasks.lastCreate).toEqual({ text: 'Да се купи лепило', siteId: 's1', assigneeId: null });
+            expect(texts(page)).toEqual(['Да се купи лепило']);
+            expect(section(page).querySelector<HTMLInputElement>('input.new-text')!.value).toBe('');
+        });
+
+        it('ticking a task moves it down crossed out', async () => {
+            tasks.tasks = [testTask({ id: 'a', text: 'Лепило' }), testTask({ id: 'b', text: 'Плочки' })];
+            const { harness, page } = await render();
+
+            section(page).querySelector<HTMLElement>('[nz-checkbox]')!.click();
+            await harness.fixture.whenStable();
+
+            expect(tasks.calls).toContain('done a true');
+            expect(texts(page)).toEqual(['Плочки', 'Лепило']);
+            expect(section(page).querySelectorAll('li.task.done')).toHaveLength(1);
+        });
+
+        it('✕ only for Owner', async () => {
+            tasks.tasks = [testTask({ id: 'a' })];
+            const owner = await render();
+            expect(section(owner.page).querySelector('button.remove')).toBeTruthy();
+        });
+
+        it('Manager sees no ✕', async () => {
+            role = 'Manager';
+            tasks.tasks = [testTask({ id: 'a' })];
+            const { page } = await render();
+
+            expect(section(page).querySelector('li.task')).toBeTruthy();
+            expect(section(page).querySelector('button.remove')).toBeNull();
+        });
+    });
+
     describe('"Работни дни"', () => {
         const section = (page: HTMLElement) => page.querySelector<HTMLElement>('section.work-days')!;
         const dayForm = () => document.querySelector<HTMLElement>('.atlas-sheet atlas-work-day-form');
@@ -670,7 +747,7 @@ describe('SiteDetailPageComponent', () => {
 
             expect(payments.calls).toEqual(['list s1']);
             const sections = Array.from(page.querySelectorAll('section')).map((s) => s.className);
-            expect(sections).toEqual(['site-contacts', 'work-days', 'payments', 'prices']);
+            expect(sections).toEqual(['site-contacts', 'tasks', 'work-days', 'payments', 'prices']);
             expect(text(section(page)!.querySelector('h2'))).toBe('Плащания 2');
             expect(button(section(page)!, 'Плащане')).toBeDefined();
             expect(Array.from(section(page)!.querySelectorAll('button.payment .label')).map(text)).toEqual([

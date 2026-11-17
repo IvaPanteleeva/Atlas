@@ -42,7 +42,7 @@ describe('App', () => {
     });
 
     it('renders the shell for a signed-in user', async () => {
-        meResult = of({ id: '1', userName: 'iva', role: 'Owner', companyId: null });
+        meResult = of({ id: '1', userName: 'iva', role: 'Owner', companyId: null, personId: null });
 
         const element = await start();
 
