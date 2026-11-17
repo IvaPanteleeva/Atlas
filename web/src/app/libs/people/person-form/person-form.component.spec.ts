@@ -57,6 +57,10 @@ describe('PersonFormComponent', () => {
         expect(field<HTMLTextAreaElement>('person-note').maxLength).toBe(500);
         expect(element.textContent).toContain('Само за нас');
         expect(element.querySelector('label.crew')?.textContent).toContain('Работи с нас (в екипа)');
+        expect(field('person-rate')).toBeTruthy();
+        expect(field('person-rate').closest('nz-form-item')?.textContent).toContain('Дневна ставка');
+        expect(field('person-rate').closest('nz-form-item')?.textContent).toContain('Предлага се като сума за деня');
+        expect(field('person-rate').closest('nz-input-wrapper')?.textContent).toContain('€');
         expect(button('Изтрий')).toBeUndefined();
     });
 
@@ -77,7 +81,7 @@ describe('PersonFormComponent', () => {
 
         await submit();
 
-        expect(saved).toEqual([{ name: 'Владо', phone: null, note: null, isCrew: true }]);
+        expect(saved).toEqual([{ name: 'Владо', phone: null, note: null, isCrew: true, dailyRate: null }]);
     });
 
     it('a new contact: the checkbox starts off', async () => {
@@ -89,11 +93,29 @@ describe('PersonFormComponent', () => {
 
         await submit();
 
-        expect(saved).toEqual([{ name: 'Иван бояджия', phone: '0877 000 111', note: 'Само боя', isCrew: false }]);
+        expect(saved).toEqual([
+            {
+                name: 'Иван бояджия',
+                phone: '0877 000 111',
+                note: 'Само боя',
+                isCrew: false,
+                dailyRate: null,
+            },
+        ]);
     });
 
     it('fills the fields when editing; unchecking „Работи с нас“ is sent', async () => {
-        await set('person', testPerson({ name: 'Пешо', phone: '0899', note: 'Има кола', isCrew: true }));
+        await set(
+            'person',
+            testPerson({
+                name: 'Пешо',
+                phone: '0899',
+                note: 'Има кола',
+                isCrew: true,
+                dailyRate: 110,
+            }),
+        );
+        expect(field('person-rate').value).toBe('110,00');
         expect(field('person-name').value).toBe('Пешо');
         expect(field('person-phone').value).toBe('0899');
         expect(field<HTMLTextAreaElement>('person-note').value).toBe('Има кола');
@@ -103,7 +125,32 @@ describe('PersonFormComponent', () => {
         await fixture.whenStable();
         await submit();
 
-        expect(saved).toEqual([{ name: 'Пешо', phone: '0899', note: 'Има кола', isCrew: false }]);
+        expect(saved).toEqual([{ name: 'Пешо', phone: '0899', note: 'Има кола', isCrew: false, dailyRate: 110 }]);
+    });
+
+    it('the daily rate is sent as a number (decimal comma) and must be above 0', async () => {
+        await type('person-name', 'Владо');
+        await type('person-rate', '0');
+        await submit();
+        expect(saved).toEqual([]);
+        expect(field('person-rate').closest('nz-form-item')?.textContent).toContain(
+            'Сумата трябва да е по-голяма от 0',
+        );
+
+        await type('person-rate', '125,5');
+        await submit();
+        expect(saved).toEqual([{ name: 'Владо', phone: null, note: null, isCrew: true, dailyRate: 125.5 }]);
+    });
+
+    it('a linked person shows „Свързан с профил … — съдружник“; there is no partner checkbox', async () => {
+        expect(element.querySelector('.linked')).toBeNull();
+        expect(element.querySelector('label.partner')).toBeNull();
+
+        await set('person', testPerson({ name: 'Ива', isPartner: true, linkedUserName: 'iva' }));
+
+        expect(element.querySelector('.linked')?.textContent?.trim()).toBe('Свързан с профил iva — съдружник');
+        await submit();
+        expect(saved[0]).not.toHaveProperty('isPartner');
     });
 
     it('delete is only shown with canDelete (Owner)', async () => {

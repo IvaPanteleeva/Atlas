@@ -4,7 +4,7 @@ import { testUser } from '../testing/fake-users.service';
 import { UserListComponent } from './user-list.component';
 
 const users: UserAccount[] = [
-    testUser({ id: 'u1', userName: 'iva', role: 'Owner' }),
+    testUser({ id: 'u1', userName: 'iva', role: 'Owner', personId: 'p4', personName: 'Ива' }),
     testUser({ id: 'u2', userName: 'pesho', role: 'Manager' }),
     testUser({ id: 'u3', userName: 'zheni', role: 'ClientViewer', companyId: 'c1', companyName: 'Женистрой' }),
 ];
@@ -39,6 +39,21 @@ describe('UserListComponent', () => {
             'Управител',
             'Възложител · Женистрой',
         ]);
+    });
+
+    it('shows the linked person and „Свържи с човек“ / „Смени човека“ (not for the client)', () => {
+        let linkFor: UserAccount[] = [];
+        fixture.componentInstance.linkPerson.subscribe((user) => linkFor.push(user));
+
+        expect(text(rows()[0].querySelector('.person'))).toBe('Ива');
+        expect(rows()[1].querySelector('.person')).toBeNull();
+        expect(button(rows()[0], 'Смени човека')).toBeDefined();
+        expect(button(rows()[2], 'Свържи с човек')).toBeUndefined();
+
+        button(rows()[1], 'Свържи с човек')!.click();
+        button(rows()[0], 'Смени човека')!.click();
+        expect(linkFor.map((user) => user.id)).toEqual(['u2', 'u1']);
+        linkFor = [];
     });
 
     it('„Нова парола“ is on every row', () => {

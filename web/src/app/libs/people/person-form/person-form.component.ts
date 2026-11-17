@@ -21,11 +21,13 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { MONEY_MAX, MONEY_MIN } from '../../services/service.model';
 import { FieldErrors } from '../../shared/api-errors';
+import { DecimalInputDirective } from '../../shared/decimal-input';
 import { Person, PERSON_LIMITS, SavePersonRequest } from '../person.model';
 
 /** Fields that have a place in the form; server errors for other keys go to the alert. */
-const FORM_FIELDS = ['name', 'phone', 'note', 'isCrew'];
+const FORM_FIELDS = ['name', 'phone', 'note', 'isCrew', 'dailyRate'];
 
 function notBlank(control: AbstractControl<string>): ValidationErrors | null {
     return control.value.trim() ? null : { required: true };
@@ -39,7 +41,15 @@ function orNull(value: string): string | null {
 /** Dumb form for a person (create when person is null, edit otherwise). The page owns saving and the sheet. */
 @Component({
     selector: 'atlas-person-form',
-    imports: [ReactiveFormsModule, NzAlertModule, NzButtonModule, NzCheckboxModule, NzFormModule, NzInputModule],
+    imports: [
+        ReactiveFormsModule,
+        NzAlertModule,
+        NzButtonModule,
+        NzCheckboxModule,
+        NzFormModule,
+        NzInputModule,
+        DecimalInputDirective,
+    ],
     templateUrl: './person-form.component.html',
     styleUrl: './person-form.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,6 +75,7 @@ export class PersonFormComponent {
         phone: ['', Validators.maxLength(PERSON_LIMITS.phone)],
         note: ['', Validators.maxLength(PERSON_LIMITS.note)],
         isCrew: [true],
+        dailyRate: [null as number | null, [Validators.min(MONEY_MIN), Validators.max(MONEY_MAX)]],
     });
 
     protected readonly confirmingDelete = signal(false);
@@ -114,6 +125,7 @@ export class PersonFormComponent {
             phone: orNull(value.phone),
             note: orNull(value.note),
             isCrew: value.isCrew,
+            dailyRate: value.dailyRate ?? null,
         });
     }
 
@@ -124,6 +136,7 @@ export class PersonFormComponent {
                 phone: person?.phone ?? '',
                 note: person?.note ?? '',
                 isCrew: person ? person.isCrew : crewDefault,
+                dailyRate: person?.dailyRate ?? null,
             },
             { emitEvent: false },
         );

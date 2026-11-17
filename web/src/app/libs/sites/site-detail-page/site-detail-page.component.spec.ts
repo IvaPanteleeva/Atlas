@@ -454,7 +454,7 @@ describe('SiteDetailPageComponent', () => {
             expect(loading()).toBeNull();
         });
 
-        it('the day form offers the crew under „Кой работи“ and sends the chosen workerIds (also Manager)', async () => {
+        it('the day form offers the crew under „Кой работи“ and sends the chosen workers (also Manager)', async () => {
             role = 'Manager';
             const { harness, page } = await render();
             expect(people.calls).toEqual(['list']);
@@ -471,7 +471,7 @@ describe('SiteDetailPageComponent', () => {
             button(form, 'Запази')!.click();
             await harness.fixture.whenStable();
 
-            expect(workDays.lastRequest?.workerIds).toEqual(['p3']);
+            expect(workDays.lastRequest?.workers).toEqual([{ personId: 'p3', pay: null }]);
         });
 
         it('Manager adds and edits days, may change prices, but sees no delete', async () => {
@@ -615,6 +615,33 @@ describe('SiteDetailPageComponent', () => {
                 Node.DOCUMENT_POSITION_FOLLOWING,
             );
             expect(page.querySelector('.pill.q')).toBeNull();
+        });
+
+        it('under the ledger: „Разход за хора | Остава за нас“ from the summary', async () => {
+            summaries.siteResult = of(testSiteSummary({ workerCost: 400, net: 757.89 }));
+
+            const { page } = await render();
+
+            const cost = page.querySelector<HTMLElement>('atlas-cost-ledger')!;
+            expect(Array.from(cost.querySelectorAll('.ledger__label')).map(text)).toEqual([
+                'Разход за хора',
+                'Остава за нас',
+            ]);
+            expect(Array.from(cost.querySelectorAll('.ledger__value')).map(text)).toEqual(['400,00 €', '757,89 €']);
+            expect(ledger(page)!.compareDocumentPosition(cost)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+            expect(page.querySelector('.pill.workers-open')).toBeNull();
+        });
+
+        it('shows „N хора без сума за деня“ (and „1 човек …“) when pays are missing', async () => {
+            summaries.siteResult = of(testSiteSummary({ workerOpenCount: 3 }));
+            const { page } = await render();
+            expect(text(page.querySelector('.pill.workers-open'))).toBe('3 хора без сума за деня');
+        });
+
+        it('one worker without pay reads „1 човек без сума за деня“', async () => {
+            summaries.siteResult = of(testSiteSummary({ workerOpenCount: 1 }));
+            const { page } = await render();
+            expect(text(page.querySelector('.pill.workers-open'))).toBe('1 човек без сума за деня');
         });
 
         it('shows „N позиции без цена / за уточняване“ when something is open', async () => {

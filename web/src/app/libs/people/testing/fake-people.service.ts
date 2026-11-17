@@ -12,6 +12,10 @@ export function testPerson(overrides: Partial<Person> = {}): Person {
         isCrew: true,
         dayCount: 0,
         lastWorkDate: null,
+        dailyRate: null,
+        earned: 0,
+        isPartner: false,
+        linkedUserName: null,
         ...overrides,
     };
 }

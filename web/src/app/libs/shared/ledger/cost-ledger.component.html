@@ -1,0 +1,10 @@
+<dl class="ledger ledger--two" [class.ledger--long]="long()">
+    <div class="ledger__col">
+        <dt class="ledger__label">Разход за хора</dt>
+        <dd class="ledger__value num">{{ workerCost() | eur }}</dd>
+    </div>
+    <div class="ledger__col" [class.ledger__col--good]="net() > 0" [class.ledger__col--warn]="net() < 0">
+        <dt class="ledger__label">Остава за нас</dt>
+        <dd class="ledger__value num">{{ net() | eur }}</dd>
+    </div>
+</dl>

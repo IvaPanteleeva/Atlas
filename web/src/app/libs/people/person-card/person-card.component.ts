@@ -1,14 +1,21 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { EurPipe } from '../../shared/eur.pipe';
 import { PhoneActionsComponent } from '../../shared/phone-actions/phone-actions.component';
 import { Person } from '../person.model';
 
-/** „12 дни на обекти · последно 16.11“, „1 ден …“ or „Няма записани дни“ (the numbers come from the server). */
-export function daysLabel(person: Pick<Person, 'dayCount' | 'lastWorkDate'>): string {
+const eur = new EurPipe();
+
+/**
+ * „12 дни · изкарал 1 440,00 € · последно 16.11“ once there is pay; before that „12 дни на обекти · последно 16.11“,
+ * „1 ден …“ or „Няма записани дни“. The numbers come from the server.
+ */
+export function daysLabel(person: Pick<Person, 'dayCount' | 'lastWorkDate' | 'earned'>): string {
     if (!person.dayCount) {
         return 'Няма записани дни';
     }
-    const days = `${person.dayCount} ${person.dayCount === 1 ? 'ден' : 'дни'} на обекти`;
+    const count = `${person.dayCount} ${person.dayCount === 1 ? 'ден' : 'дни'}`;
+    const days = person.earned > 0 ? `${count} · изкарал ${eur.transform(person.earned)}` : `${count} на обекти`;
     if (!person.lastWorkDate) {
         return days;
     }

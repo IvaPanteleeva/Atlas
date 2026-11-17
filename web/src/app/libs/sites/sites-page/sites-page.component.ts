@@ -8,6 +8,7 @@ import { AuthStore } from '../../auth/+state/auth.store';
 import { CompaniesStore } from '../../companies/+state/companies.store';
 import { Company } from '../../companies/company.model';
 import { EurPipe } from '../../shared/eur.pipe';
+import { CostLedgerComponent } from '../../shared/ledger/cost-ledger.component';
 import { LedgerComponent } from '../../shared/ledger/ledger.component';
 import { SummariesStore } from '../../summaries/+state/summaries.store';
 import { SitesStore } from '../+state/sites.store';
@@ -28,6 +29,7 @@ import { SiteListComponent } from '../site-list/site-list.component';
         NzModalModule,
         EurPipe,
         LedgerComponent,
+        CostLedgerComponent,
         SiteListComponent,
         SiteFormComponent,
     ],

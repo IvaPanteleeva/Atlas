@@ -2,7 +2,10 @@ import { ChangeDetectionStrategy, Component, input, output, signal } from '@angu
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { ROLE_LABELS, UserAccount } from '../user.model';
 
-/** Dumb list of login profiles: name, role, company; „Нова парола“ and a two-step „Изтрий“ (not for yourself). */
+/**
+ * Dumb list of login profiles: name, role, company, linked person; „Свържи с човек“ / „Смени човека“ (not for the
+ * client), „Нова парола“ and a two-step „Изтрий“ (not for yourself).
+ */
 @Component({
     selector: 'atlas-user-list',
     imports: [NzButtonModule],
@@ -17,6 +20,7 @@ export class UserListComponent {
     readonly saving = input(false);
 
     readonly newPassword = output<UserAccount>();
+    readonly linkPerson = output<UserAccount>();
     readonly remove = output<UserAccount>();
 
     protected readonly roleLabels = ROLE_LABELS;

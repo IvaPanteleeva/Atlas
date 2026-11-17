@@ -51,6 +51,16 @@ describe('PersonCardComponent', () => {
         expect(call.getAttribute('href')).toBe('tel:0888111222');
     });
 
+    it('a partner has the tag „съдружник“ next to the name', async () => {
+        await render(testPerson({ name: 'Ива', isPartner: false }));
+        expect(element.querySelector('.partner-tag')).toBeNull();
+
+        await render(testPerson({ name: 'Ива', isPartner: true, linkedUserName: 'iva' }));
+        expect(text(element.querySelector('.partner-tag'))).toBe('съдружник');
+        expect(element.querySelector('.name')?.contains(element.querySelector('.partner-tag'))).toBe(false);
+        expect(text(element.querySelector('.profile'))).toBe('профил: iva');
+    });
+
     it('a person without a phone has no phone buttons', async () => {
         await render(testPerson({ phone: null }));
 
@@ -91,6 +101,22 @@ describe('PersonCardComponent', () => {
 
         await render(testPerson({ dayCount: 0, lastWorkDate: null }));
         expect(text(element.querySelector('.days'))).toBe('Няма записани дни');
+    });
+
+    it('with earnings shows „N дни · изкарал X € · последно dd.mm“', async () => {
+        await render(testPerson({ dayCount: 12, lastWorkDate: '2026-11-16', earned: 1440 }));
+        expect(text(element.querySelector('.days'))).toBe('12 дни · изкарал 1 440,00 € · последно 16.11');
+
+        await render(testPerson({ dayCount: 1, lastWorkDate: '2026-11-16', earned: 120.5 }));
+        expect(text(element.querySelector('.days'))).toBe('1 ден · изкарал 120,50 € · последно 16.11');
+    });
+
+    it('a partner with wage days also shows „изкарал X €“; without them only the days', async () => {
+        await render(testPerson({ isPartner: true, dayCount: 3, lastWorkDate: '2026-11-16', earned: 300 }));
+        expect(text(element.querySelector('.days'))).toBe('3 дни · изкарал 300,00 € · последно 16.11');
+
+        await render(testPerson({ isPartner: true, dayCount: 3, lastWorkDate: '2026-11-16', earned: 0 }));
+        expect(text(element.querySelector('.days'))).not.toContain('изкарал');
     });
 
     it('the note and „Редакция“ are only shown when allowed (Owner)', async () => {

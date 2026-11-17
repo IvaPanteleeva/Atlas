@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
+import { testPerson } from '../../people/testing/fake-people.service';
 import { APP_ICONS } from '../../shared/icons';
 import { CreateUserRequest } from '../user.model';
 import { UserFormComponent } from './user-form.component';
@@ -22,6 +23,10 @@ describe('UserFormComponent', () => {
         cancels = 0;
         fixture.componentInstance.save.subscribe((request) => saved.push(request));
         fixture.componentInstance.cancel.subscribe(() => cancels++);
+        fixture.componentRef.setInput('people', [
+            testPerson({ id: 'p1', name: 'Гошо' }),
+            testPerson({ id: 'p4', name: 'Ива' }),
+        ]);
         fixture.componentRef.setInput('companies', [
             { id: 'c1', name: 'Женистрой' },
             { id: 'c2', name: 'Друга' },
@@ -84,7 +89,9 @@ describe('UserFormComponent', () => {
 
         await submit();
 
-        expect(saved).toEqual([{ userName: 'pesho', password: '12345678', role: 'Manager', companyId: null }]);
+        expect(saved).toEqual([
+            { userName: 'pesho', password: '12345678', role: 'Manager', companyId: null, personId: null },
+        ]);
     });
 
     it('the company is asked for (and required) only for „Възложител“', async () => {
@@ -99,12 +106,38 @@ describe('UserFormComponent', () => {
 
         await choose('user-company', 'Женистрой');
         await submit();
-        expect(saved).toEqual([{ userName: 'zheni', password: '12345678', role: 'ClientViewer', companyId: 'c1' }]);
+        expect(saved).toEqual([
+            { userName: 'zheni', password: '12345678', role: 'ClientViewer', companyId: 'c1', personId: null },
+        ]);
 
         await choose('user-role', 'Администратор');
         expect(element.querySelector('nz-select#user-company')).toBeNull();
         await submit();
-        expect(saved[1]).toEqual({ userName: 'zheni', password: '12345678', role: 'Owner', companyId: null });
+        expect(saved[1]).toEqual({
+            userName: 'zheni',
+            password: '12345678',
+            role: 'Owner',
+            companyId: null,
+            personId: null,
+        });
+    });
+
+    it('„Човек от екипа“ is optional („Без човек“), sent as personId and hidden for „Възложител“', async () => {
+        expect(text(element.querySelector('nz-select#user-person .ant-select-selection-item'))).toBe('Без човек');
+        await type('user-name', 'iva2');
+        await type('user-password', '12345678');
+        await choose('user-person', 'Ива');
+
+        await submit();
+        expect(saved).toEqual([
+            { userName: 'iva2', password: '12345678', role: 'Manager', companyId: null, personId: 'p4' },
+        ]);
+
+        await choose('user-role', 'Възложител');
+        expect(element.querySelector('nz-select#user-person')).toBeNull();
+        await choose('user-company', 'Женистрой');
+        await submit();
+        expect(saved[1].personId).toBeNull();
     });
 
     it('the role select offers Администратор, Управител and Възложител', async () => {

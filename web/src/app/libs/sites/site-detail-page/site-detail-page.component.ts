@@ -23,6 +23,7 @@ import { PaymentFormComponent } from '../../payments/payment-form/payment-form.c
 import { PaymentListComponent } from '../../payments/payment-list/payment-list.component';
 import { PeopleStore } from '../../people/+state/people.store';
 import { ServicesStore } from '../../services/+state/services.store';
+import { CostLedgerComponent } from '../../shared/ledger/cost-ledger.component';
 import { LedgerComponent } from '../../shared/ledger/ledger.component';
 import { SiteContactsStore } from '../../site-contacts/+state/site-contacts.store';
 import { SaveSiteContactRequest, SiteContact } from '../../site-contacts/site-contact.model';
@@ -61,6 +62,7 @@ import { SiteHeaderComponent } from '../site-header/site-header.component';
         SitePriceFormComponent,
         WorkDayListComponent,
         LedgerComponent,
+        CostLedgerComponent,
         PaymentListComponent,
         SiteContactListComponent,
         SiteContactFormComponent,
@@ -290,6 +292,11 @@ export class SiteDetailPageComponent {
             this.paymentFormOpen.set(false);
             this.reloadAfterPaymentChange();
         }
+    }
+
+    /** „1 човек без сума за деня“, „N хора …“. */
+    protected workerOpenLabel(count: number): string {
+        return `${count} ${count === 1 ? 'човек' : 'хора'} без сума за деня`;
     }
 
     /** One open item reads „1 позиция …“, more „N позиции …“. */

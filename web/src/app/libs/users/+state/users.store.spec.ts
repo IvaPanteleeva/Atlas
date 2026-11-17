@@ -4,7 +4,13 @@ import { UsersService } from '../users.service';
 import { FakeUsersService, httpError } from '../testing/fake-users.service';
 import { UsersStore } from './users.store';
 
-const request: CreateUserRequest = { userName: 'gosho', password: '12345678', role: 'Manager', companyId: null };
+const request: CreateUserRequest = {
+    userName: 'gosho',
+    password: '12345678',
+    role: 'Manager',
+    companyId: null,
+    personId: null,
+};
 
 describe('UsersStore', () => {
     let fake: FakeUsersService;
@@ -83,6 +89,24 @@ describe('UsersStore', () => {
         expect(await store.remove('u1')).toBe(false);
         expect(store.error()).toBe('Трябва да остане поне един Owner.');
         expect(names()).toEqual(['iva', 'zheni']);
+    });
+
+    it('linkPerson replaces the profile with the reply; 409 shows the reason', async () => {
+        await store.load();
+
+        const updated = await store.linkPerson('u2', 'p3');
+
+        expect(fake.calls).toContain('person u2 p3');
+        expect(updated?.personName).toBe('Пешо');
+        expect(store.users().find((u) => u.id === 'u2')?.personId).toBe('p3');
+
+        expect(await store.linkPerson('u2', null)).not.toBeNull();
+        expect(fake.calls).toContain('person u2 null');
+        expect(store.users().find((u) => u.id === 'u2')?.personId).toBeNull();
+
+        fake.linkResult = httpError(409, { title: 'Човекът вече е свързан с друг профил' });
+        expect(await store.linkPerson('u2', 'p1')).toBeNull();
+        expect(store.error()).toBe('Човекът вече е свързан с друг профил');
     });
 
     it('clearErrors clears the messages', async () => {

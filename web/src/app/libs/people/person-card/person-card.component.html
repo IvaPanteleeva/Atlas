@@ -1,4 +1,12 @@
-<h3 class="name">{{ person().name }}</h3>
+<div class="head">
+    <h3 class="name">{{ person().name }}</h3>
+    @if (person().isPartner) {
+        <span class="partner-tag">съдружник</span>
+    }
+</div>
+@if (person().linkedUserName; as userName) {
+    <span class="profile">профил: {{ userName }}</span>
+}
 @if (person().phone; as phone) {
     <atlas-phone-actions class="phone-row" [phone]="phone" />
 }

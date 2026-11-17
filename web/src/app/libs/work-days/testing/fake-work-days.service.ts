@@ -42,7 +42,7 @@ function echo(siteId: string, id: string, request: SaveWorkDayRequest): WorkDay 
         items: request.items.map((item, index) =>
             testWorkItem({ ...item, id: item.id ?? `${id}-i${index}`, amount: null }),
         ),
-        workers: request.workerIds.map((id) => ({ id, name: id })),
+        workers: request.workers.map(({ personId, pay }) => ({ id: personId, name: personId, pay, isPartner: false })),
         total: 0,
     });
 }

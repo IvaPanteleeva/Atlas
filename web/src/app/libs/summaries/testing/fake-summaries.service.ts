@@ -8,6 +8,9 @@ export function testSiteSummary(overrides: Partial<SiteSummary> = {}): SiteSumma
         paid: 500,
         remaining: 657.89,
         openCount: 0,
+        workerCost: 400,
+        workerOpenCount: 0,
+        net: 757.89,
         workDayCount: 2,
         lastWorkDate: '2026-11-14',
         ...overrides,
@@ -15,11 +18,32 @@ export function testSiteSummary(overrides: Partial<SiteSummary> = {}): SiteSumma
 }
 
 export function testSummaryRow(overrides: Partial<SiteSummaryRow> = {}): SiteSummaryRow {
-    return { siteId: 's1', earned: 1157.89, paid: 500, remaining: 657.89, openCount: 0, ...overrides };
+    return {
+        siteId: 's1',
+        earned: 1157.89,
+        paid: 500,
+        remaining: 657.89,
+        openCount: 0,
+        workerCost: 400,
+        workerOpenCount: 0,
+        net: 757.89,
+        ...overrides,
+    };
 }
 
 export function testTotals(overrides: Partial<SummaryTotals> = {}): SummaryTotals {
-    return { earned: 1157.89, paid: 500, owed: 657.89, overpaid: 0, overpaidSiteCount: 0, openCount: 0, ...overrides };
+    return {
+        earned: 1157.89,
+        paid: 500,
+        owed: 657.89,
+        overpaid: 0,
+        overpaidSiteCount: 0,
+        openCount: 0,
+        workerCost: 400,
+        workerOpenCount: 0,
+        net: 757.89,
+        ...overrides,
+    };
 }
 
 export class FakeSummariesService {

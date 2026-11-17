@@ -6,6 +6,15 @@
             Най-много {{ control.getError('maxlength').requiredLength }} знака
         }
     </ng-template>
+    <ng-template #rateTip let-control>
+        @if (control.hasError('number')) {
+            Въведи число
+        } @else if (control.hasError('min')) {
+            Сумата трябва да е по-голяма от 0
+        } @else if (control.hasError('max')) {
+            Сумата може да е най-много 100 000 €
+        }
+    </ng-template>
     <ng-template #lengthTip let-control>
         @if (control.hasError('maxlength')) {
             Най-много {{ control.getError('maxlength').requiredLength }} знака
@@ -57,9 +66,31 @@
         </nz-form-control>
     </nz-form-item>
 
+    <nz-form-item>
+        <nz-form-label nzFor="person-rate">Дневна ставка</nz-form-label>
+        <nz-form-control [nzErrorTip]="rateTip" nzExtra="Предлага се като сума за деня">
+            <nz-input-wrapper nzSuffix="€">
+                <input
+                    nz-input
+                    atlasDecimalInput
+                    id="person-rate"
+                    formControlName="dailyRate"
+                    [decimals]="2"
+                    [fixedDecimals]="true"
+                />
+            </nz-input-wrapper>
+            @if (serverError('dailyRate'); as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
     <label nz-checkbox class="crew" formControlName="isCrew">Работи с нас (в екипа)</label>
     @if (serverError('isCrew'); as message) {
         <div class="server-error">{{ message }}</div>
+    }
+    @if (person()?.linkedUserName; as userName) {
+        <p class="linked">Свързан с профил {{ userName }} — съдружник</p>
     }
 
     @if (error() || otherErrors().length) {

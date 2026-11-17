@@ -13,9 +13,15 @@
     @if (auth.isStaff() && summaries.siteId() === site.id) {
         @if (summaries.site(); as money) {
             <atlas-ledger class="ledger" [earned]="money.earned" [paid]="money.paid" [remaining]="money.remaining" />
-            @if (money.openCount > 0) {
+            <atlas-cost-ledger class="cost-ledger" [workerCost]="money.workerCost" [net]="money.net" />
+            @if (money.openCount > 0 || money.workerOpenCount > 0) {
                 <p class="open">
-                    <span class="pill q">{{ openLabel(money.openCount) }}</span>
+                    @if (money.openCount > 0) {
+                        <span class="pill q">{{ openLabel(money.openCount) }}</span>
+                    }
+                    @if (money.workerOpenCount > 0) {
+                        <span class="pill q workers-open">{{ workerOpenLabel(money.workerOpenCount) }}</span>
+                    }
                 </p>
             }
         } @else if (summaries.error(); as message) {

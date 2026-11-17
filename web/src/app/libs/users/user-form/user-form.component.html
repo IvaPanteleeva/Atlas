@@ -74,6 +74,23 @@
         </nz-form-item>
     }
 
+    @if (!needsCompany()) {
+        <nz-form-item>
+            <nz-form-label nzFor="user-person-input">Човек от екипа</nz-form-label>
+            <nz-form-control nzExtra="По избор. Свързаният човек е съдружник: дните му не са разход.">
+                <nz-select id="user-person" formControlName="personId" nzId="user-person-input">
+                    <nz-option [nzValue]="noPerson" nzLabel="Без човек" />
+                    @for (person of people(); track person.id) {
+                        <nz-option [nzValue]="person.id" [nzLabel]="person.name" />
+                    }
+                </nz-select>
+                @if (serverError('personId'); as message) {
+                    <div class="server-error">{{ message }}</div>
+                }
+            </nz-form-control>
+        </nz-form-item>
+    }
+
     @if (error() || otherErrors().length) {
         <nz-alert class="error" nzType="error" nzShowIcon role="alert" [nzMessage]="alertText" />
         <ng-template #alertText>

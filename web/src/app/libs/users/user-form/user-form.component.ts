@@ -15,10 +15,13 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { Role } from '../../auth/auth.model';
 import { Company } from '../../companies/company.model';
+import { Person } from '../../people/person.model';
 import { FieldErrors } from '../../shared/api-errors';
 import { CreateUserRequest, PASSWORD_MIN_LENGTH, ROLE_OPTIONS } from '../user.model';
 
-const FORM_FIELDS = ['userName', 'password', 'role', 'companyId'];
+const FORM_FIELDS = ['userName', 'password', 'role', 'companyId', 'personId'];
+/** Select value of „Без човек“ (nz-select shows null as an empty field). */
+const NO_PERSON = '';
 const DEFAULT_ROLE: Role = 'Manager';
 
 function notBlank(control: AbstractControl<string>): ValidationErrors | null {
@@ -43,6 +46,8 @@ function notBlank(control: AbstractControl<string>): ValidationErrors | null {
 })
 export class UserFormComponent {
     readonly companies = input<Company[]>([]);
+    /** Crew people that can be linked (not linked to another profile). */
+    readonly people = input<Person[]>([]);
     readonly saving = input(false);
     readonly error = input<string | null>(null);
     readonly fieldErrors = input<FieldErrors>({});
@@ -51,6 +56,7 @@ export class UserFormComponent {
     readonly cancel = output<void>();
 
     protected readonly roles = ROLE_OPTIONS;
+    protected readonly noPerson = NO_PERSON;
     protected readonly passwordVisible = signal(false);
 
     protected readonly form = inject(NonNullableFormBuilder).group({
@@ -58,6 +64,7 @@ export class UserFormComponent {
         password: ['', [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH)]],
         role: [DEFAULT_ROLE],
         companyId: [null as string | null],
+        personId: [NO_PERSON],
     });
 
     private readonly role = toSignal(this.form.controls.role.valueChanges, { initialValue: DEFAULT_ROLE });
@@ -103,6 +110,8 @@ export class UserFormComponent {
             password: value.password,
             role: value.role,
             companyId: value.role === 'ClientViewer' ? value.companyId : null,
+            // A client profile is never linked to a person.
+            personId: value.role === 'ClientViewer' ? null : value.personId || null,
         });
     }
 }

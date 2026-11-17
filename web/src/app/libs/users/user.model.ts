@@ -8,6 +8,9 @@ export interface UserAccount {
     /** Only for ClientViewer: the company whose portal they see. */
     companyId: string | null;
     companyName: string | null;
+    /** The crew person linked to this profile (Owner/Manager only); a linked person is a partner. */
+    personId: string | null;
+    personName: string | null;
 }
 
 /** Body for POST /api/users. companyId is required for ClientViewer and null otherwise. */
@@ -16,6 +19,13 @@ export interface CreateUserRequest {
     password: string;
     role: Role;
     companyId: string | null;
+    /** Optional crew person to link (not for ClientViewer). */
+    personId: string | null;
+}
+
+/** Body for PUT /api/users/{id}/person (null = unlink). */
+export interface LinkPersonRequest {
+    personId: string | null;
 }
 
 /** Body for PUT /api/users/{id}/password. */

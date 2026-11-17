@@ -74,6 +74,22 @@ export const UsersStore = signalStore(
             }
         },
 
+        /** Links a crew person to the profile (null = unlink). Returns the profile; null on failure (409 in error). */
+        async linkPerson(id: string, personId: string | null): Promise<UserAccount | null> {
+            patchState(store, { saving: true, error: null, fieldErrors: {} });
+            try {
+                const updated = await firstValueFrom(service.linkPerson(id, { personId }));
+                patchState(store, {
+                    users: store.users().map((user) => (user.id === id ? updated : user)),
+                    saving: false,
+                });
+                return updated;
+            } catch (error) {
+                patchState(store, { saving: false, ...saveError(error) });
+                return null;
+            }
+        },
+
         /** Deletes a profile. The API refuses (409) the own profile and the last Owner. */
         async remove(id: string): Promise<boolean> {
             patchState(store, { saving: true, error: null, fieldErrors: {} });

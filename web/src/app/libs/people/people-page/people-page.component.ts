@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -9,6 +9,7 @@ import { UsersStore } from '../../users/+state/users.store';
 import { PasswordFormComponent } from '../../users/password-form/password-form.component';
 import { CreateUserRequest, UserAccount } from '../../users/user.model';
 import { UserFormComponent } from '../../users/user-form/user-form.component';
+import { UserPersonFormComponent } from '../../users/user-person-form/user-person-form.component';
 import { UserListComponent } from '../../users/user-list/user-list.component';
 import { PeopleStore } from '../+state/people.store';
 import { ContactListComponent } from '../contact-list/contact-list.component';
@@ -33,6 +34,7 @@ import { PersonFormComponent } from '../person-form/person-form.component';
         UserListComponent,
         UserFormComponent,
         PasswordFormComponent,
+        UserPersonFormComponent,
     ],
     templateUrl: './people-page.component.html',
     styleUrl: './people-page.component.scss',
@@ -54,6 +56,13 @@ export class PeoplePageComponent {
     /** The profile getting a new password; null = that sheet is closed. */
     protected readonly passwordUser = signal<UserAccount | null>(null);
     protected readonly notice = signal<string | null>(null);
+    /** The profile whose linked person is being chosen; null = that sheet is closed. */
+    protected readonly linkUser = signal<UserAccount | null>(null);
+
+    /** Crew people not linked to any profile (for a new profile). */
+    protected readonly unlinkedCrew = computed(() => this.linkableCrew(null));
+    /** Crew people for the „Свържи с човек“ sheet: the profile's own person stays, others' are left out. */
+    protected readonly linkOptions = computed(() => this.linkableCrew(this.linkUser()?.id ?? null));
 
     constructor() {
         void this.store.load();
@@ -105,6 +114,28 @@ export class PeoplePageComponent {
     protected async createUser(request: CreateUserRequest): Promise<void> {
         if (await this.users.create(request)) {
             this.userFormOpen.set(false);
+            if (request.personId) {
+                // „съдружник“ and the profile name on the card are computed by the server.
+                void this.store.load();
+            }
+        }
+    }
+
+    protected openLinkForm(user: UserAccount): void {
+        this.users.clearErrors();
+        this.notice.set(null);
+        this.linkUser.set(user);
+    }
+
+    protected closeLinkForm(): void {
+        this.linkUser.set(null);
+    }
+
+    protected async linkPerson(personId: string | null): Promise<void> {
+        const user = this.linkUser();
+        if (user && (await this.users.linkPerson(user.id, personId))) {
+            this.linkUser.set(null);
+            void this.store.load();
         }
     }
 
@@ -124,6 +155,16 @@ export class PeoplePageComponent {
             this.passwordUser.set(null);
             this.notice.set(`Паролата на ${user.userName} е сменена.`);
         }
+    }
+
+    private linkableCrew(forUserId: string | null) {
+        const taken = new Set(
+            this.users
+                .users()
+                .filter((user) => user.id !== forUserId && user.personId)
+                .map((user) => user.personId),
+        );
+        return this.store.crew().filter((person) => !taken.has(person.id));
     }
 
     protected async removeUser(user: UserAccount): Promise<void> {

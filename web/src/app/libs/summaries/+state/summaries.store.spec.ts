@@ -92,6 +92,9 @@ describe('SummariesStore', () => {
                 overpaid: 0,
                 overpaidSiteCount: 0,
                 openCount: 3,
+                workerCost: 400,
+                workerOpenCount: 0,
+                net: 757.89,
             });
             expect(Object.keys(store.bySite())).toEqual(['s1', 's2']);
             expect(store.bySite()['s2'].remaining).toBe(142.11);

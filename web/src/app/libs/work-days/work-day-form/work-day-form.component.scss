@@ -78,6 +78,33 @@ nz-input-wrapper {
     }
 }
 
+// One row per chosen person: „Име · за деня“ on the left, the pay on the right.
+.worker-pays {
+    margin-top: 10px;
+}
+
+.worker-pays .worker-pay {
+    flex-flow: row nowrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+
+    nz-form-label {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0;
+    }
+
+    nz-form-control {
+        flex: 0 0 150px;
+    }
+}
+
+.workers-total {
+    color: var(--muted);
+    font-size: 13px;
+}
+
 .workers-empty {
     margin: 0;
     color: var(--muted);

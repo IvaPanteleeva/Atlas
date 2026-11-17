@@ -6,8 +6,15 @@ nz-form-item {
     margin-bottom: 14px;
 }
 
-input[nz-input] {
+input[nz-input],
+nz-input-wrapper {
     min-height: 40px;
+}
+
+.linked {
+    margin: 0 0 12px;
+    color: var(--muted);
+    font-size: 13px;
 }
 
 .crew {

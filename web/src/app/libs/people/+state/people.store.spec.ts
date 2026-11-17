@@ -4,7 +4,13 @@ import { SavePersonRequest } from '../person.model';
 import { FakePeopleService, httpError } from '../testing/fake-people.service';
 import { PeopleStore } from './people.store';
 
-const request: SavePersonRequest = { name: 'Владо', phone: '0877 000 111', note: null, isCrew: true };
+const request: SavePersonRequest = {
+    name: 'Владо',
+    phone: '0877 000 111',
+    note: null,
+    isCrew: true,
+    dailyRate: null,
+};
 
 describe('PeopleStore', () => {
     let fake: FakePeopleService;
@@ -72,7 +78,13 @@ describe('PeopleStore', () => {
     it('update replaces the person (moving between crew and contacts)', async () => {
         await store.load();
 
-        const updated = await store.update('p3', { name: 'Пешо', phone: null, note: null, isCrew: false });
+        const updated = await store.update('p3', {
+            name: 'Пешо',
+            phone: null,
+            note: null,
+            isCrew: false,
+            dailyRate: null,
+        });
 
         expect(updated?.isCrew).toBe(false);
         expect(fake.calls).toContain('update p3 Пешо');

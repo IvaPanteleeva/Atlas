@@ -19,7 +19,14 @@
     margin-top: 14px;
 }
 
+.cost-ledger {
+    margin-top: 8px;
+}
+
 .open {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     margin: 8px 0 0;
 }
 

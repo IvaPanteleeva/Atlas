@@ -20,6 +20,7 @@
             [remaining]="totals.owed"
             lastLabel="Дължат ни"
         />
+        <atlas-cost-ledger class="cost-ledger" [workerCost]="totals.workerCost" [net]="totals.net" />
         @if (totals.overpaid > 0 || totals.openCount > 0) {
             <p class="pills">
                 @if (totals.overpaid > 0) {

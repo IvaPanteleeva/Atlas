@@ -10,7 +10,7 @@ import { Me, Role } from '../../auth/auth.model';
 import { AuthService } from '../../auth/auth.service';
 import { CompaniesService } from '../../companies/companies.service';
 import { APP_ICONS } from '../../shared/icons';
-import { FakeUsersService } from '../../users/testing/fake-users.service';
+import { FakeUsersService, testUser } from '../../users/testing/fake-users.service';
 import { UsersService } from '../../users/users.service';
 import { PeopleService } from '../people.service';
 import { FakePeopleService, httpError } from '../testing/fake-people.service';
@@ -118,7 +118,13 @@ describe('PeoplePageComponent', () => {
             button(form, 'Запази')!.click();
             await harness.fixture.whenStable();
 
-            expect(people.lastRequest).toEqual({ name: 'Владо', phone: null, note: null, isCrew: true });
+            expect(people.lastRequest).toEqual({
+                name: 'Владо',
+                phone: null,
+                note: null,
+                isCrew: true,
+                dailyRate: null,
+            });
             await vi.waitFor(() => expect(inSheet('atlas-person-form')).toBeNull());
             expect(cardNames(page)).toEqual(['Владо', 'Гошо', 'Пешо']);
         });
@@ -192,6 +198,7 @@ describe('PeoplePageComponent', () => {
                 password: '12345678',
                 role: 'ClientViewer',
                 companyId: 'c1',
+                personId: null,
             });
             await vi.waitFor(() => expect(inSheet('atlas-user-form')).toBeNull());
             expect(text(page.querySelector('atlas-user-list'))).toContain('zheni2');
@@ -231,6 +238,37 @@ describe('PeoplePageComponent', () => {
             expect(users.lastPassword).toEqual({ password: '87654321' });
             await vi.waitFor(() => expect(inSheet('atlas-password-form')).toBeNull());
             expect(text(page.querySelector('.profiles .notice'))).toBe('Паролата на pesho е сменена.');
+        });
+
+        it('„Свържи с човек“ offers crew people not linked to another profile, saves and reloads the people', async () => {
+            users.listResult = of([
+                testUser({ id: 'u1', userName: 'iva', role: 'Owner', personId: 'p1', personName: 'Гошо' }),
+                testUser({ id: 'u2', userName: 'pesho', role: 'Manager' }),
+            ]);
+            const { harness, page } = await render();
+            const row = page.querySelectorAll<HTMLElement>('atlas-user-list .user')[1];
+
+            button(row, 'Свържи с човек')!.click();
+            await harness.fixture.whenStable();
+            const form = await waitFor('atlas-user-person-form');
+            expect(text(document.querySelector('.atlas-sheet .ant-modal-title'))).toBe('Човек за pesho');
+            form.querySelector<HTMLElement>('nz-select#link-person .ant-select-selector')!.click();
+            await harness.fixture.whenStable();
+            const options = await vi.waitFor(() => {
+                const found = Array.from(document.querySelectorAll<HTMLElement>('nz-option-item'));
+                expect(found.length).toBeGreaterThan(0);
+                return found;
+            });
+            expect(options.map((o) => text(o))).toEqual(['Без човек', 'Пешо']);
+            options[1].click();
+            await harness.fixture.whenStable();
+            button(form, 'Запази')!.click();
+            await harness.fixture.whenStable();
+
+            expect(users.calls).toContain('person u2 p3');
+            await vi.waitFor(() => expect(inSheet('atlas-user-person-form')).toBeNull());
+            expect(text(page.querySelectorAll('atlas-user-list .user')[1].querySelector('.person'))).toBe('Пешо');
+            expect(people.calls).toEqual(['list', 'list']);
         });
 
         it('no „Изтрий“ for yourself; a refused delete (409) shows the reason above the list', async () => {

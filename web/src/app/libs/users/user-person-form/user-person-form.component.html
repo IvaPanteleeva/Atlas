@@ -1,0 +1,25 @@
+<form nz-form nzLayout="vertical" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <nz-form-item>
+        <nz-form-label nzFor="link-person-input">Човек от екипа</nz-form-label>
+        <nz-form-control nzExtra="Свързаният човек е съдружник: дните му не са разход.">
+            <nz-select id="link-person" formControlName="personId" nzId="link-person-input">
+                <nz-option [nzValue]="noPerson" nzLabel="Без човек" />
+                @for (person of people(); track person.id) {
+                    <nz-option [nzValue]="person.id" [nzLabel]="person.name" />
+                }
+            </nz-select>
+            @if (fieldErrors()['personId']; as message) {
+                <div class="server-error">{{ message }}</div>
+            }
+        </nz-form-control>
+    </nz-form-item>
+
+    @if (error(); as message) {
+        <nz-alert class="error" nzType="error" nzShowIcon role="alert" [nzMessage]="message" />
+    }
+
+    <div class="footer">
+        <button nz-button type="button" [disabled]="saving()" (click)="cancel.emit()">Отказ</button>
+        <button nz-button nzType="primary" type="submit" [nzLoading]="saving()">Запази</button>
+    </div>
+</form>

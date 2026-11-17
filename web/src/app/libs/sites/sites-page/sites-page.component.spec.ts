@@ -219,7 +219,7 @@ describe('SitesPageComponent', () => {
 
         beforeEach(() => {
             summaries.allResult = of({
-                totals: testTotals({ earned: 1300, paid: 500, owed: 800, openCount: 3 }),
+                totals: testTotals({ earned: 1300, paid: 500, owed: 800, openCount: 3, workerCost: 350, net: 950 }),
                 sites: [
                     testSummaryRow({ siteId: 's1', earned: 1157.89, paid: 500, remaining: 657.89, openCount: 0 }),
                     testSummaryRow({ siteId: 's2', earned: 142.11, paid: 0, remaining: 142.11, openCount: 3 }),
@@ -246,6 +246,20 @@ describe('SitesPageComponent', () => {
                 Node.DOCUMENT_POSITION_FOLLOWING,
             );
             expect(text(page.querySelector('.pill.q'))).toBe('3 без цена / за уточняване');
+        });
+
+        it('under the totals: „Разход за хора | Остава за нас“ for all sites', async () => {
+            const { page } = await render();
+
+            const cost = page.querySelector<HTMLElement>('atlas-cost-ledger')!;
+            expect(Array.from(cost.querySelectorAll('.ledger__label')).map(text)).toEqual([
+                'Разход за хора',
+                'Остава за нас',
+            ]);
+            expect(Array.from(cost.querySelectorAll('.ledger__value')).map(text)).toEqual(['350,00 €', '950,00 €']);
+            expect(page.querySelector('atlas-ledger')!.compareDocumentPosition(cost)).toBe(
+                Node.DOCUMENT_POSITION_FOLLOWING,
+            );
         });
 
         it('Owner sees the money on each row', async () => {

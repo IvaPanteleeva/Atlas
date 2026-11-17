@@ -83,7 +83,7 @@
                 Профил
             </button>
         </div>
-        @if (!userFormOpen() && !passwordUser() && users.error(); as message) {
+        @if (!userFormOpen() && !passwordUser() && !linkUser() && users.error(); as message) {
             <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
         }
         @if (notice(); as message) {
@@ -97,6 +97,7 @@
                 [currentUserId]="auth.user()?.id ?? null"
                 [saving]="users.saving()"
                 (newPassword)="openPasswordForm($event)"
+                (linkPerson)="openLinkForm($event)"
                 (remove)="removeUser($event)"
             />
         }
@@ -115,6 +116,7 @@
         <ng-container *nzModalContent>
             <atlas-user-form
                 [companies]="companies.companies()"
+                [people]="unlinkedCrew()"
                 [saving]="users.saving()"
                 [error]="users.error()"
                 [fieldErrors]="users.fieldErrors()"
@@ -142,6 +144,29 @@
                 [fieldErrors]="users.fieldErrors()"
                 (save)="setPassword($event)"
                 (cancel)="closePasswordForm()"
+            />
+        </ng-container>
+    </nz-modal>
+
+    <nz-modal
+        [nzVisible]="!!linkUser()"
+        [nzTitle]="'Човек за ' + (linkUser()?.userName ?? '')"
+        [nzFooter]="null"
+        nzWrapClassName="atlas-sheet"
+        nzCentered
+        [nzWidth]="420"
+        [nzMaskClosable]="false"
+        (nzOnCancel)="closeLinkForm()"
+    >
+        <ng-container *nzModalContent>
+            <atlas-user-person-form
+                [people]="linkOptions()"
+                [personId]="linkUser()?.personId ?? null"
+                [saving]="users.saving()"
+                [error]="users.error()"
+                [fieldErrors]="users.fieldErrors()"
+                (save)="linkPerson($event)"
+                (cancel)="closeLinkForm()"
             />
         </ng-container>
     </nz-modal>

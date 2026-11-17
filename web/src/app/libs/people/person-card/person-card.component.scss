@@ -10,12 +10,35 @@
     background: var(--surface);
 }
 
+.head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+}
+
+// Same small tag as the day list chips.
+.partner-tag {
+    padding: 1px 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--sunk);
+    color: var(--muted);
+    font-size: 12px;
+}
+
 .name {
     margin: 0;
     font-family: var(--f-display);
     font-size: 18px;
     font-weight: 500;
     overflow-wrap: break-word;
+}
+
+.profile {
+    margin-top: -6px;
+    color: var(--muted);
+    font-size: 12px;
 }
 
 .days {

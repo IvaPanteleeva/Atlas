@@ -19,8 +19,9 @@ const services: Service[] = [
 /** The crew (people who work with us): Гошо and Пешо; Иван is a contact (not offered for new days). */
 const people: Person[] = [
     testPerson({ id: 'p3', name: 'Пешо' }),
-    testPerson({ id: 'p1', name: 'Гошо' }),
+    testPerson({ id: 'p1', name: 'Гошо', dailyRate: 120 }),
     testPerson({ id: 'p2', name: 'Иван', isCrew: false }),
+    testPerson({ id: 'p4', name: 'Ива', isPartner: true, dailyRate: 200 }),
 ];
 
 /** Боядисване has an agreed price on this site (6,50 instead of the default 6). */
@@ -200,7 +201,7 @@ describe('WorkDayFormComponent', () => {
                 date: '2026-11-16',
                 title: 'Шпакловка финал',
                 note: 'Ключ при съседа',
-                workerIds: [],
+                workers: [],
                 items: [
                     {
                         id: null,
@@ -397,12 +398,12 @@ describe('WorkDayFormComponent', () => {
 
         it('offers the crew by name (no contacts), none chosen for a new day', () => {
             expect(text(element.querySelector('.workers-label'))).toBe('Кой работи');
-            expect(pillNames()).toEqual(['Гошо', 'Пешо']);
+            expect(pillNames()).toEqual(['Гошо', 'Ива', 'Пешо']);
             expect(checked()).toEqual([]);
             expect(element.querySelector('label.worker input[type="checkbox"]')).toBeTruthy();
         });
 
-        it('toggling a pill marks it and sends the chosen workerIds', async () => {
+        it('toggling a pill marks it and sends the chosen workers', async () => {
             await toggle('Пешо');
             await toggle('Гошо');
             expect(checked()).toEqual(['Гошо', 'Пешо']);
@@ -410,10 +411,10 @@ describe('WorkDayFormComponent', () => {
 
             await toggle('Пешо');
             expect(checked()).toEqual(['Гошо']);
-            expect(pills()[1].classList).not.toContain('on');
+            expect(pills()[2].classList).not.toContain('on');
 
             await fillAndSubmit();
-            expect(saved[0].workerIds).toEqual(['p1']);
+            expect(saved[0].workers).toEqual([{ personId: 'p1', pay: 120 }]);
         });
 
         it('a day keeps people who are no longer crew (or not in the list at all) chosen', async () => {
@@ -421,23 +422,26 @@ describe('WorkDayFormComponent', () => {
                 'day',
                 testWorkDay({
                     workers: [
-                        { id: 'p2', name: 'Иван' },
-                        { id: 'p9', name: 'Ангел' },
-                        { id: 'p3', name: 'Пешо' },
+                        { id: 'p2', name: 'Иван', pay: 80, isPartner: false },
+                        { id: 'p9', name: 'Ангел', pay: null, isPartner: false },
+                        { id: 'p3', name: 'Пешо', pay: 100, isPartner: false },
                     ],
                 }),
             );
 
-            expect(pillNames()).toEqual(['Ангел', 'Гошо', 'Иван', 'Пешо']);
+            expect(pillNames()).toEqual(['Ангел', 'Гошо', 'Ива', 'Иван', 'Пешо']);
             expect(checked()).toEqual(['Ангел', 'Иван', 'Пешо']);
 
             await toggle('Ангел');
             await submit();
-            expect(saved[0].workerIds).toEqual(['p2', 'p3']);
+            expect(saved[0].workers).toEqual([
+                { personId: 'p2', pay: 80 },
+                { personId: 'p3', pay: 100 },
+            ]);
         });
 
         it('a new day after editing starts with nobody chosen', async () => {
-            await set('day', testWorkDay({ workers: [{ id: 'p1', name: 'Гошо' }] }));
+            await set('day', testWorkDay({ workers: [{ id: 'p1', name: 'Гошо', pay: 120, isPartner: false }] }));
             expect(checked()).toEqual(['Гошо']);
 
             await set('day', null);
@@ -445,13 +449,165 @@ describe('WorkDayFormComponent', () => {
             expect(checked()).toEqual([]);
         });
 
-        it('without crew shows a hint; the server error for workerIds is under the field', async () => {
+        it('without crew shows a hint; the server error for workers is under the field', async () => {
             await set('people', []);
             expect(text(element.querySelector('.workers-empty'))).toBe('Няма хора в екипа. Добави ги в „Хора“.');
 
-            await set('fieldErrors', { workerIds: 'Човекът не е от екипа.' });
+            await set('fieldErrors', { workers: 'Човекът не е от екипа.' });
             expect(text(element.querySelector('.workers-field'))).toContain('Човекът не е от екипа.');
             expect(element.querySelector('nz-alert')).toBeNull();
+        });
+        describe('pay for the day', () => {
+            const payRows = () => Array.from(element.querySelectorAll<HTMLElement>('.worker-pay'));
+            const payInput = (index: number) => element.querySelector<HTMLInputElement>(`#wd-worker-${index}-pay`)!;
+            const footer = () => element.querySelector<HTMLElement>('.day-total')!;
+
+            it('a checked person gets a row „Име · за деня“ with € and the daily rate prefilled', async () => {
+                await toggle('Пешо');
+                await toggle('Гошо');
+
+                expect(payRows().map((row) => text(row.querySelector('label')))).toEqual([
+                    'Гошо · за деня',
+                    'Пешо · за деня',
+                ]);
+                expect(payRows()[0].querySelector('nz-input-wrapper')?.textContent).toContain('€');
+                expect(payInput(0).value).toBe('120,00');
+                expect(payInput(1).value).toBe('');
+                expect(payInput(1).placeholder).toBe('за уточняване');
+
+                await toggle('Гошо');
+                expect(payRows().map((row) => text(row.querySelector('label')))).toEqual(['Пешо · за деня']);
+            });
+
+            it('the pay can be changed or left empty („за уточняване“) and is sent', async () => {
+                await toggle('Гошо');
+                await toggle('Пешо');
+                await type(payInput(0), '95,5');
+
+                await fillAndSubmit();
+
+                expect(saved[0].workers).toEqual([
+                    { personId: 'p1', pay: 95.5 },
+                    { personId: 'p3', pay: null },
+                ]);
+            });
+
+            it('editing a day shows the stored pay, not the daily rate', async () => {
+                await set('day', testWorkDay({ workers: [{ id: 'p1', name: 'Гошо', pay: 90, isPartner: false }] }));
+
+                expect(payInput(0).value).toBe('90,00');
+
+                await submit();
+                expect(saved[0].workers).toEqual([{ personId: 'p1', pay: 90 }]);
+            });
+
+            it('the footer shows „Хора: X €“ and „+N без сума“ while typing', async () => {
+                expect(footer().querySelector('.workers-total')).toBeNull();
+
+                await toggle('Гошо');
+                await toggle('Пешо');
+                expect(text(footer().querySelector('.workers-total'))).toBe('Хора: 120,00 €');
+                expect(text(footer().querySelector('.pill.workers-open'))).toBe('+1 без сума');
+
+                await type(payInput(1), '80,25');
+                expect(text(footer().querySelector('.workers-total'))).toBe('Хора: 200,25 €');
+                expect(footer().querySelector('.pill.workers-open')).toBeNull();
+            });
+
+            it('a pay of 0 or not a number is not saved', async () => {
+                await toggle('Гошо');
+                await type(payInput(0), '0');
+
+                await fillAndSubmit();
+
+                expect(saved).toEqual([]);
+                expect(text(payRows()[0])).toContain('Сумата трябва да е по-голяма от 0');
+            });
+
+            it('a partner gets a „за деня“ row that starts empty (not from the daily rate) with its own hint', async () => {
+                await toggle('Ива');
+                await toggle('Гошо');
+
+                expect(payRows().map((row) => text(row.querySelector('label')))).toEqual([
+                    'Гошо · за деня',
+                    'Ива · за деня',
+                ]);
+                expect(payInput(0).value).toBe('120,00');
+                expect(payInput(1).value).toBe('');
+                expect(payInput(1).placeholder).toBe('надник');
+                expect(payInput(0).placeholder).toBe('за уточняване');
+            });
+
+            it('an empty partner pay is not „без сума“ and is sent as null', async () => {
+                await toggle('Ива');
+                expect(payRows().length).toBe(1);
+                expect(footer().querySelector('.workers-total')).toBeNull();
+                expect(footer().querySelector('.pill.workers-open')).toBeNull();
+
+                await toggle('Гошо');
+                expect(text(footer().querySelector('.workers-total'))).toBe('Хора: 120,00 €');
+                expect(footer().querySelector('.pill.workers-open')).toBeNull();
+
+                await fillAndSubmit();
+                expect(saved[0].workers).toEqual([
+                    { personId: 'p1', pay: 120 },
+                    { personId: 'p4', pay: null },
+                ]);
+            });
+
+            it("a filled partner pay (a day's wage) counts in „Хора: X €“ and is sent", async () => {
+                await toggle('Ива');
+                await type(payInput(0), '150');
+                expect(text(footer().querySelector('.workers-total'))).toBe('Хора: 150,00 €');
+                expect(footer().querySelector('.pill.workers-open')).toBeNull();
+
+                await toggle('Пешо');
+                expect(text(footer().querySelector('.workers-total'))).toBe('Хора: 150,00 €');
+                expect(text(footer().querySelector('.pill.workers-open'))).toBe('+1 без сума');
+
+                await fillAndSubmit();
+                expect(saved[0].workers).toEqual([
+                    { personId: 'p4', pay: 150 },
+                    { personId: 'p3', pay: null },
+                ]);
+            });
+
+            it('editing a day shows the stored partner pay (also for a partner not in the list)', async () => {
+                await set('people', []);
+                await set(
+                    'day',
+                    testWorkDay({
+                        workers: [
+                            { id: 'p4', name: 'Ива', pay: 180, isPartner: true },
+                            { id: 'p5', name: 'Мила', pay: null, isPartner: true },
+                        ],
+                    }),
+                );
+
+                expect(checked()).toEqual(['Ива', 'Мила']);
+                expect(payInput(0).value).toBe('180,00');
+                expect(payInput(1).value).toBe('');
+                expect(payInput(1).placeholder).toBe('надник');
+                expect(text(footer().querySelector('.workers-total'))).toBe('Хора: 180,00 €');
+                expect(footer().querySelector('.pill.workers-open')).toBeNull();
+
+                await submit();
+                expect(saved[0].workers).toEqual([
+                    { personId: 'p4', pay: 180 },
+                    { personId: 'p5', pay: null },
+                ]);
+            });
+
+            it('server errors for a worker pay show under that row', async () => {
+                await toggle('Гошо');
+                await toggle('Пешо');
+
+                await set('fieldErrors', { 'workers[1].pay': 'Невалидна сума' });
+
+                expect(text(payRows()[1])).toContain('Невалидна сума');
+                expect(text(payRows()[0])).not.toContain('Невалидна сума');
+                expect(element.querySelector('nz-alert')).toBeNull();
+            });
         });
     });
 });

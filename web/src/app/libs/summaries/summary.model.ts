@@ -8,6 +8,12 @@ export interface SiteSummary {
     remaining: number;
     /** Items without a price or flagged „за уточняване“. */
     openCount: number;
+    /** Σ pay of the people on the site's work days. */
+    workerCost: number;
+    /** Workers on the site's days without a pay („за уточняване“). */
+    workerOpenCount: number;
+    /** earned − workerCost: „Остава за нас“ (from the earned money, not the paid). */
+    net: number;
     workDayCount: number;
     /** yyyy-MM-dd; null when the site has no work days. */
     lastWorkDate: string | null;
@@ -27,6 +33,10 @@ export interface SummaryTotals {
     /** How many sites are overpaid. */
     overpaidSiteCount: number;
     openCount: number;
+    workerCost: number;
+    workerOpenCount: number;
+    /** earned − workerCost over all sites. */
+    net: number;
 }
 
 /** One site in GET /api/sites/summaries. */
@@ -37,6 +47,9 @@ export interface SiteSummaryRow {
     /** earned − paid; negative = overpaid. */
     remaining: number;
     openCount: number;
+    workerCost: number;
+    workerOpenCount: number;
+    net: number;
 }
 
 /** GET /api/sites/summaries. Owner and Manager. */

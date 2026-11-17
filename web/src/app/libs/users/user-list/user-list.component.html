@@ -15,8 +15,16 @@
                             · {{ user.companyName }}
                         }
                     </span>
+                    @if (user.personName) {
+                        <span class="person">{{ user.personName }}</span>
+                    }
                 </div>
                 <div class="actions">
+                    @if (user.role !== 'ClientViewer') {
+                        <button nz-button nzSize="small" type="button" (click)="linkPerson.emit(user)">
+                            {{ user.personId ? 'Смени човека' : 'Свържи с човек' }}
+                        </button>
+                    }
                     <button nz-button nzSize="small" type="button" (click)="newPassword.emit(user)">Нова парола</button>
                     @if (user.id !== currentUserId()) {
                         <button

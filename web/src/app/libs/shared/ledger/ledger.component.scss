@@ -12,6 +12,11 @@
     background: var(--surface);
 }
 
+// Two columns (atlas-cost-ledger: „Разход за хора | Остава за нас“).
+.ledger--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .ledger__col {
     min-width: 0;
     padding: 10px 12px;

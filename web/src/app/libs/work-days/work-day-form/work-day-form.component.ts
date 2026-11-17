@@ -49,8 +49,25 @@ const FREE_TEXT = '';
 const DEFAULT_UNIT: Unit = 'SquareMeter';
 
 /** Server error keys that have a place in the form; the rest go to the alert. */
-const DAY_FIELDS = ['date', 'title', 'note', 'items', 'workerIds'];
+const DAY_FIELDS = ['date', 'title', 'note', 'items', 'workers'];
+const WORKER_FIELD_KEY = /^workers\[\d+\]\.(personId|pay)$/;
 const ITEM_FIELD_KEY = /^items\[\d+\]\.(serviceId|description|quantity|unit|rate|needsReview)$/;
+
+/**
+ * One chosen person with their pay for the day; name is only for the label.
+ * A partner's pay is optional (rule of round 31): empty = works for the shared profit, filled = a day's wage.
+ */
+type WorkerForm = FormGroup<{
+    personId: FormControl<string>;
+    name: FormControl<string>;
+    isPartner: FormControl<boolean>;
+    pay: FormControl<number | null>;
+}>;
+
+interface WorkerOption {
+    id: string;
+    name: string;
+}
 
 type ItemForm = FormGroup<{
     id: FormControl<string | null>;
@@ -108,7 +125,7 @@ function previewTotal(items: { quantity: number | null; rate: number | null }[])
  * Who can be picked: the crew, plus the people already on the day (even if no longer crew or not in the list),
  * sorted by name.
  */
-function workerOptions(people: Person[], dayWorkers: WorkDayWorker[]): WorkDayWorker[] {
+function workerOptions(people: Person[], dayWorkers: WorkDayWorker[]): WorkerOption[] {
     const options = new Map<string, string>();
     for (const person of people) {
         if (person.isCrew) {
@@ -181,6 +198,7 @@ export class WorkDayFormComponent {
         title: ['', Validators.maxLength(WORK_DAY_LIMITS.title)],
         note: ['', Validators.maxLength(WORK_DAY_LIMITS.note)],
         items: this.fb.array<ItemForm>([]),
+        workers: this.fb.array<WorkerForm>([]),
     });
 
     protected readonly confirmingDelete = signal(false);
@@ -190,6 +208,16 @@ export class WorkDayFormComponent {
     /** Raw item values (disabled read-only prices included), kept in a signal for the live total. */
     private readonly itemValues = signal<{ quantity: number | null; rate: number | null }[]>([]);
     protected readonly summary = computed(() => previewTotal(this.itemValues()));
+    /** Pays of the chosen people, for the live „Хора: X €“ (a preview; the server sums). */
+    protected readonly workerPays = signal<{ pay: number | null; isPartner: boolean }[]>([]);
+    /** An empty partner pay is neither a cost nor „без сума“, so it is left out; a filled one counts. */
+    private readonly countedPays = computed(() =>
+        this.workerPays().filter((worker) => !worker.isPartner || worker.pay !== null),
+    );
+    protected readonly showWorkerTotal = computed(() => this.countedPays().length > 0);
+    protected readonly workerSummary = computed(() =>
+        previewTotal(this.countedPays().map(({ pay }) => ({ quantity: 1, rate: pay }))),
+    );
 
     protected readonly serviceOptions = computed(() =>
         this.services().map((service) => ({
@@ -200,7 +228,7 @@ export class WorkDayFormComponent {
 
     protected readonly otherErrors = computed(() =>
         Object.entries(this.fieldErrors())
-            .filter(([key]) => !DAY_FIELDS.includes(key) && !ITEM_FIELD_KEY.test(key))
+            .filter(([key]) => !DAY_FIELDS.includes(key) && !ITEM_FIELD_KEY.test(key) && !WORKER_FIELD_KEY.test(key))
             .map(([, message]) => message),
     );
 
@@ -226,6 +254,10 @@ export class WorkDayFormComponent {
         this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.syncItemValues());
     }
 
+    protected get workerRows(): FormArray<WorkerForm> {
+        return this.form.controls.workers;
+    }
+
     protected get items(): FormArray<ItemForm> {
         return this.form.controls.items;
     }
@@ -238,8 +270,20 @@ export class WorkDayFormComponent {
         return this.workerIds().includes(id);
     }
 
+    /** Checking prefills the pay from the daily rate (a partner's starts empty); unchecking drops the row. */
     protected toggleWorker(id: string): void {
-        this.workerIds.update((ids) => (ids.includes(id) ? ids.filter((other) => other !== id) : [...ids, id]));
+        const index = this.workerRows.controls.findIndex((row) => row.controls.personId.value === id);
+        if (index >= 0) {
+            this.workerRows.removeAt(index);
+        } else {
+            const option = this.workerOptions().find((candidate) => candidate.id === id);
+            const person = this.people().find((candidate) => candidate.id === id);
+            const isPartner = this.isPartner(id, false);
+            const pay = isPartner ? null : (person?.dailyRate ?? null);
+            this.workerRows.push(this.buildWorker(id, option?.name ?? '', isPartner, pay));
+            this.sortWorkers();
+        }
+        this.workerIds.set(this.workerRows.controls.map((row) => row.controls.personId.value));
     }
 
     protected addItem(): void {
@@ -279,9 +323,10 @@ export class WorkDayFormComponent {
             title: orNull(value.title),
             note: orNull(value.note),
             // In the order shown (by name).
-            workerIds: this.workerOptions()
-                .map((option) => option.id)
-                .filter((id) => this.isWorker(id)),
+            workers: value.workers.map((worker) => ({
+                personId: worker.personId,
+                pay: worker.pay,
+            })),
             items: value.items.map((item) => ({
                 id: item.id,
                 serviceId: item.serviceId || null,
@@ -336,8 +381,34 @@ export class WorkDayFormComponent {
         return group;
     }
 
+    /** Partner by the current people list; for someone not in it, by the flag stored on the day. */
+    private isPartner(personId: string, onDay: boolean): boolean {
+        return this.people().find((person) => person.id === personId)?.isPartner ?? onDay;
+    }
+
+    private buildWorker(personId: string, name: string, isPartner: boolean, pay: number | null): WorkerForm {
+        return this.fb.group({
+            personId: [personId],
+            name: [name],
+            isPartner: [isPartner],
+            pay: this.fb.control<number | null>(pay, [Validators.min(MONEY_MIN), Validators.max(MONEY_MAX)]),
+        });
+    }
+
+    /** Rows in the same order as the pills (by name). */
+    private sortWorkers(): void {
+        const order = this.workerOptions().map((option) => option.id);
+        const rows = [...this.workerRows.controls].sort(
+            (a, b) => order.indexOf(a.controls.personId.value) - order.indexOf(b.controls.personId.value),
+        );
+        this.workerRows.clear({ emitEvent: false });
+        rows.forEach((row) => this.workerRows.push(row, { emitEvent: false }));
+        this.workerRows.updateValueAndValidity();
+    }
+
     private syncItemValues(): void {
         this.itemValues.set(this.items.getRawValue().map(({ quantity, rate }) => ({ quantity, rate })));
+        this.workerPays.set(this.workerRows.getRawValue().map(({ pay, isPartner }) => ({ pay, isPartner })));
     }
 
     private reset(day: WorkDay | null): void {
@@ -353,8 +424,16 @@ export class WorkDayFormComponent {
             },
             { emitEvent: false },
         );
+        // Existing days keep their stored pay (not the current daily rate).
+        this.workerRows.clear({ emitEvent: false });
+        for (const worker of day?.workers ?? []) {
+            const name = this.workerOptions().find((option) => option.id === worker.id)?.name ?? worker.name;
+            const isPartner = this.isPartner(worker.id, worker.isPartner);
+            this.workerRows.push(this.buildWorker(worker.id, name, isPartner, worker.pay), { emitEvent: false });
+        }
+        this.sortWorkers();
         this.syncItemValues();
-        this.workerIds.set(day?.workers.map((worker) => worker.id) ?? []);
+        this.workerIds.set(this.workerRows.controls.map((row) => row.controls.personId.value));
         this.confirmingDelete.set(false);
     }
 }

@@ -99,11 +99,11 @@ describe('WorkDayListComponent', () => {
             testWorkDay({
                 id: 'd1',
                 workers: [
-                    { id: 'p1', name: 'Гошо' },
-                    { id: 'p3', name: 'Пешо' },
+                    { id: 'p1', name: 'Гошо', pay: 120, isPartner: false },
+                    { id: 'p3', name: 'Пешо', pay: null, isPartner: false },
                 ],
             }),
-            testWorkDay({ id: 'd2', title: null, workers: [{ id: 'p1', name: 'Гошо' }] }),
+            testWorkDay({ id: 'd2', title: null, workers: [{ id: 'p1', name: 'Гошо', pay: 120, isPartner: false }] }),
             testWorkDay({ id: 'd3', workers: [] }),
         ]);
 

@@ -15,10 +15,20 @@ export interface WorkItem {
     amount: number | null;
 }
 
-/** Who worked on a day (ordered by name by the server). */
+/** Who worked on a day (ordered by name by the server), with their pay for that day. */
 export interface WorkDayWorker {
     id: string;
     name: string;
+    /** Pay for the day (own copy, prefilled from the daily rate); null = „за уточняване“. */
+    pay: number | null;
+    /** Partner: the pay is optional; empty = shared profit (not a cost, not „за уточняване“). */
+    isPartner: boolean;
+}
+
+/** One worker of the save body. A partner's pay is null unless a day's wage was written. */
+export interface SaveWorkDayWorkerRequest {
+    personId: string;
+    pay: number | null;
 }
 
 /** GET /api/sites/{siteId}/workdays (newest first) and the response of POST/PUT. */
@@ -56,8 +66,8 @@ export interface SaveWorkDayRequest {
     title: string | null;
     note: string | null;
     items: SaveWorkItemRequest[];
-    /** People who worked that day. New ones must be crew; ones already on the day stay valid. */
-    workerIds: string[];
+    /** People who worked that day with their pay. New ones must be crew; ones already on the day stay valid. */
+    workers: SaveWorkDayWorkerRequest[];
 }
 
 /** Same limits as the API. */

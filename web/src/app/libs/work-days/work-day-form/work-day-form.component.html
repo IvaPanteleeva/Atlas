@@ -22,6 +22,15 @@
             Количеството може да е най-много 100 000
         }
     </ng-template>
+    <ng-template #payTip let-control>
+        @if (control.hasError('number')) {
+            Въведи число
+        } @else if (control.hasError('min')) {
+            Сумата трябва да е по-голяма от 0
+        } @else if (control.hasError('max')) {
+            Сумата може да е най-много 100 000 €
+        }
+    </ng-template>
     <ng-template #rateTip let-control>
         @if (control.hasError('number')) {
             Въведи число
@@ -80,7 +89,34 @@
         } @else {
             <p class="workers-empty">Няма хора в екипа. Добави ги в „Хора“.</p>
         }
-        @if (serverError('workerIds'); as message) {
+        @if (workerPays().length) {
+            <div class="worker-pays" formArrayName="workers">
+                @for (row of workerRows.controls; track row; let i = $index) {
+                    <nz-form-item class="worker-pay" [formGroupName]="i">
+                        <nz-form-label [nzFor]="'wd-worker-' + i + '-pay'">
+                            {{ row.controls.name.value }} · за деня
+                        </nz-form-label>
+                        <nz-form-control [nzErrorTip]="payTip">
+                            <nz-input-wrapper nzSuffix="€">
+                                <input
+                                    nz-input
+                                    atlasDecimalInput
+                                    formControlName="pay"
+                                    [placeholder]="row.controls.isPartner.value ? 'надник' : 'за уточняване'"
+                                    [id]="'wd-worker-' + i + '-pay'"
+                                    [decimals]="2"
+                                    [fixedDecimals]="true"
+                                />
+                            </nz-input-wrapper>
+                            @if (serverError('workers[' + i + '].pay'); as message) {
+                                <div class="server-error">{{ message }}</div>
+                            }
+                        </nz-form-control>
+                    </nz-form-item>
+                }
+            </div>
+        }
+        @if (serverError('workers'); as message) {
             <div class="server-error">{{ message }}</div>
         }
     </fieldset>
@@ -240,6 +276,12 @@
             <span class="day-total__sum num">{{ summary().total | eur }}</span>
             @if (summary().missing) {
                 <span class="pill q">+{{ summary().missing }} без цена</span>
+            }
+            @if (showWorkerTotal()) {
+                <span class="workers-total num">Хора: {{ workerSummary().total | eur }}</span>
+                @if (workerSummary().missing) {
+                    <span class="pill q workers-open">+{{ workerSummary().missing }} без сума</span>
+                }
             }
         </div>
         <div class="footer__buttons">
