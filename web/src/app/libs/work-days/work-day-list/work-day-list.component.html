@@ -7,14 +7,14 @@
                     <span class="date__weekday">{{ row.weekday }}</span>
                 </div>
                 <div class="body">
-                    @if (row.day.title || row.day.workers.length) {
+                    @if (row.day.title || row.workers.length) {
                         <div class="head">
                             @if (row.day.title) {
                                 <h3 class="title">{{ row.day.title }}</h3>
                             }
-                            @if (row.day.workers.length) {
+                            @if (row.workers.length) {
                                 <ul class="chips" aria-label="Кой работи">
-                                    @for (worker of row.day.workers; track worker.id) {
+                                    @for (worker of row.workers; track worker.id) {
                                         <li class="chip">{{ worker.name }}</li>
                                     }
                                 </ul>
@@ -23,7 +23,7 @@
                     }
                     <table class="items">
                         <tbody>
-                            @for (entry of row.items; track entry.item.id) {
+                            @for (entry of row.items; track $index) {
                                 <tr class="item">
                                     <td>
                                         <span class="desc">{{ entry.item.description }}</span>
@@ -67,5 +67,5 @@
         }
     </ul>
 } @else {
-    <p class="empty">Няма записани дни. Натисни „+ Ден работа“ след всеки ден на обекта.</p>
+    <p class="empty">{{ emptyText() }}</p>
 }

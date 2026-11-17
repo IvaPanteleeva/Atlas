@@ -18,7 +18,7 @@ describe('WorkDayListComponent', () => {
     }
 
     beforeEach(() => {
-        fixture = TestBed.createComponent(WorkDayListComponent);
+        fixture = TestBed.createComponent<WorkDayListComponent<WorkDay>>(WorkDayListComponent);
         element = fixture.nativeElement as HTMLElement;
         edited = [];
         fixture.componentInstance.edit.subscribe((day) => edited.push(day));
@@ -129,5 +129,25 @@ describe('WorkDayListComponent', () => {
 
         await render([day], false);
         expect(element.querySelector('button')).toBeNull();
+    });
+    it('read only for the portal: own empty text, and days without workers and note show neither', async () => {
+        fixture.componentRef.setInput('emptyText', 'Още няма работни дни.');
+        await render([], false);
+        expect(text(element)).toBe('Още няма работни дни.');
+
+        // A portal day: no id on the items, no workers, no note.
+        const portalDay = {
+            id: 'd1',
+            date: '2026-11-16',
+            title: 'Шпакловка',
+            total: 6,
+            items: [{ description: 'Боя', quantity: 2, unit: 'Piece', rate: 3, needsReview: false, amount: 6 }],
+        } as unknown as WorkDay;
+        await render([portalDay], false);
+
+        expect(text(days()[0].querySelector('.desc'))).toBe('Боя');
+        expect(days()[0].querySelector('.chips')).toBeNull();
+        expect(days()[0].querySelector('.note')).toBeNull();
+        expect(element.querySelectorAll('button').length).toBe(0);
     });
 });

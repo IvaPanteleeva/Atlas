@@ -12,12 +12,12 @@ function isSessionExpired(error: unknown, url: string): boolean {
     return (
         error instanceof HttpErrorResponse &&
         error.status === 401 &&
-        path.startsWith('/api/') &&
+        (path.startsWith('/api/') || path.startsWith('/portal/')) &&
         !IGNORED_URLS.includes(path)
     );
 }
 
-/** On 401 from the API the session is gone: forget the user and go to /login, then rethrow. */
+/** On 401 from the API (/api or /portal) the session is gone: forget the user and go to /login, then rethrow. */
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
     // AuthStore -> AuthService -> HttpClient -> this interceptor: resolve the store lazily to avoid a DI cycle.
     const injector = inject(Injector);

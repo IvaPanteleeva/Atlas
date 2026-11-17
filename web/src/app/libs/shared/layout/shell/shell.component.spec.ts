@@ -11,6 +11,8 @@ import { Me, Role } from '../../../auth/auth.model';
 import { AuthService } from '../../../auth/auth.service';
 import { CompaniesService } from '../../../companies/companies.service';
 import { PeopleService } from '../../../people/people.service';
+import { PortalService } from '../../../portal/portal.service';
+import { FakePortalService } from '../../../portal/testing/fake-portal.service';
 import { ServicesService } from '../../../services/services.service';
 import { SitesService } from '../../../sites/sites.service';
 import { UsersService } from '../../../users/users.service';
@@ -46,6 +48,8 @@ describe('ShellComponent', () => {
                 { provide: ServicesService, useValue: { list: () => of([]) } },
                 { provide: PeopleService, useValue: { list: () => of([]) } },
                 { provide: UsersService, useValue: { list: () => of([]) } },
+                // /portal is the client's start page; it loads the client's sites.
+                { provide: PortalService, useValue: new FakePortalService() },
             ],
         });
     });
@@ -125,11 +129,13 @@ describe('ShellComponent', () => {
         expect(path()).toBe('/login');
     });
 
-    it('ClientViewer sees the portal placeholder without tabs', async () => {
+    it('ClientViewer sees the portal without tabs', async () => {
         const { element } = await render('/portal', 'ClientViewer');
 
         expect(path()).toBe('/portal');
-        expect(element.querySelector('.content h1')?.textContent).toBe('Порталът идва скоро');
+        expect(element.querySelector('.content atlas-portal-sites-page h1')?.textContent?.trim()).toBe('Обекти');
+        expect(element.querySelector('.content')?.classList).toContain('content--no-tabs');
+        expect(element.querySelector('.tabs--top, .tabs--bottom')).toBeNull();
         expect(element.querySelectorAll('.tabs a').length).toBe(0);
         expect(element.querySelector('.brand')?.getAttribute('href')).toBe('/portal');
     });
@@ -171,6 +177,13 @@ describe('ShellComponent', () => {
         await harness.fixture.whenStable();
 
         expect(path()).toBe('/companies');
+    });
+
+    it('ClientViewer has only „Изход“ in the user menu', async () => {
+        const { element } = await render('/portal', 'ClientViewer');
+
+        const items = await openUserMenu(element);
+        expect(items.map(itemText)).toEqual(['Изход']);
     });
 
     it('the client opening /companies is sent to the portal', async () => {

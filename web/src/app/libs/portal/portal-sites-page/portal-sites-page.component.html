@@ -1,0 +1,27 @@
+<h1>Обекти</h1>
+
+@if (store.error(); as message) {
+    <nz-alert class="error" nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+}
+
+@if (store.totals(); as totals) {
+    <!-- „Дължите“ is never negative (overpaid sites are shown apart), like „Дължат ни“ inside. -->
+    <dl class="owed" [class.owed--warn]="totals.owed > 0" [class.owed--good]="totals.owed <= 0">
+        <dt class="owed__label">Дължите</dt>
+        <dd class="owed__value num">{{ totals.owed | eur }}</dd>
+    </dl>
+    @if (totals.overpaid > 0) {
+        <p class="pills">
+            <span class="pill good">
+                Надплатено {{ totals.overpaid | eur }} по {{ totals.overpaidSiteCount }}
+                {{ totals.overpaidSiteCount === 1 ? 'обект' : 'обекта' }}
+            </span>
+        </p>
+    }
+}
+
+@if (store.loading() && !store.sites().length) {
+    <p class="note">Зареждане…</p>
+} @else if (!store.error()) {
+    <atlas-portal-site-list [sites]="store.sites()" />
+}

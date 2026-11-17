@@ -1,0 +1,72 @@
+:host {
+    display: block;
+}
+
+h1 {
+    margin: 0 0 16px;
+    font-size: 24px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.error {
+    margin-bottom: 12px;
+}
+
+.note {
+    color: var(--muted);
+}
+
+// One column of the prototype .ledger: label above, the amount below.
+.owed {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.owed__label {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.owed__value {
+    margin: 2px 0 0;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.owed--warn .owed__value {
+    color: var(--warn);
+}
+
+.owed--good .owed__value {
+    color: var(--good);
+}
+
+.pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: -8px 0 16px;
+}
+
+.pill {
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
+.pill.good {
+    background: var(--good-soft);
+    color: var(--good);
+}

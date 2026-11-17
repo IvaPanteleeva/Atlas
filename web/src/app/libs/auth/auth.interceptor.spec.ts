@@ -67,7 +67,15 @@ describe('authInterceptor', () => {
         expect(navigate).not.toHaveBeenCalled();
     });
 
-    it('ignores 401 from URLs outside /api', () => {
+    it('on 401 from /portal/sites (the client portal) also goes to /login', () => {
+        const error = request('/portal/sites');
+
+        expect(error?.status).toBe(401);
+        expect(store.status()).toBe('anonymous');
+        expect(navigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores 401 from URLs outside /api and /portal', () => {
         request('/other/thing');
 
         expect(navigate).not.toHaveBeenCalled();

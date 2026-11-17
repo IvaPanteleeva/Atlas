@@ -1,0 +1,48 @@
+@if (rows().length) {
+    <ul class="sites">
+        @for (row of rows(); track row.site.id) {
+            <li>
+                <a class="site" [routerLink]="['/portal', row.site.id]">
+                    <span class="site__text">
+                        <span class="name">{{ row.site.name }}</span>
+                        @if (row.site.endCustomer) {
+                            <span class="meta">{{ row.site.endCustomer }}</span>
+                        }
+                    </span>
+                    <span class="site__side">
+                        <atlas-site-status-tag [status]="row.site.status" />
+                        @if (row.hasMoney) {
+                            <span class="money">
+                                <span class="money__earned num">{{ row.site.earned | eur }}</span>
+                                @if (row.rest; as rest) {
+                                    @switch (rest.kind) {
+                                        @case ('owed') {
+                                            <span class="money__rest money__rest--warn"
+                                                >остават {{ rest.amount | eur }}</span
+                                            >
+                                        }
+                                        @case ('paid') {
+                                            <span class="money__rest money__rest--good">изплатено</span>
+                                        }
+                                        @case ('overpaid') {
+                                            <span class="money__rest money__rest--good"
+                                                >надплатено {{ rest.amount | eur }}</span
+                                            >
+                                        }
+                                    }
+                                }
+                            </span>
+                        }
+                        @if (row.site.openCount > 0) {
+                            <span class="pill q" [attr.title]="row.site.openCount + ' за уточняване'"
+                                >{{ row.site.openCount }} ?</span
+                            >
+                        }
+                    </span>
+                </a>
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">Още няма обекти.</p>
+}

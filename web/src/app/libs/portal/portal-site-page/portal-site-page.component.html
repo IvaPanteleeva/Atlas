@@ -1,0 +1,46 @@
+<a nz-button nzType="text" class="back" routerLink="/portal">
+    <nz-icon nzType="arrow-left" nzTheme="outline" aria-hidden="true" />
+    Всички обекти
+</a>
+
+@if (store.notFound()) {
+    <div class="not-found">
+        <p>Няма такъв обект.</p>
+        <a routerLink="/portal">Към всички обекти</a>
+    </div>
+} @else if (store.error(); as message) {
+    <nz-alert nzType="error" [nzMessage]="message" nzShowIcon role="alert" />
+} @else if (store.selected(); as site) {
+    <atlas-site-header [site]="site" />
+    <atlas-ledger
+        class="ledger"
+        [earned]="site.summary.earned"
+        [paid]="site.summary.paid"
+        [remaining]="site.summary.remaining"
+    />
+    @if (site.summary.openCount > 0) {
+        <p class="open">
+            <span class="pill q">{{ openLabel(site.summary.openCount) }}</span>
+        </p>
+    }
+
+    <section class="work-days" aria-labelledby="work-days-title">
+        <div class="sec-head">
+            <h2 id="work-days-title">
+                Работни дни <span class="count num">{{ site.workDays.length }}</span>
+            </h2>
+        </div>
+        <atlas-work-day-list [days]="site.workDays" [canEdit]="false" emptyText="Още няма работни дни." />
+    </section>
+
+    <section class="payments" aria-labelledby="payments-title">
+        <div class="sec-head">
+            <h2 id="payments-title">
+                Плащания <span class="count num">{{ site.payments.length }}</span>
+            </h2>
+        </div>
+        <atlas-portal-payment-list [payments]="site.payments" />
+    </section>
+} @else if (store.loading()) {
+    <p class="note">Зареждане…</p>
+}

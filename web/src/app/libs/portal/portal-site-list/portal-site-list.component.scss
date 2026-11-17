@@ -1,0 +1,107 @@
+:host {
+    display: block;
+}
+
+// Same panel as the internal list (prototype .sites): surface, 1px line, radius 8px.
+.sites,
+.empty {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.sites {
+    padding: 0;
+    list-style: none;
+    overflow: hidden;
+
+    li + li {
+        border-top: 1px solid var(--line);
+    }
+}
+
+.site {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+        background: var(--sunk);
+        color: inherit;
+    }
+}
+
+.site__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.name {
+    font-family: var(--f-display);
+    font-size: 19px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.meta {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.site__side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.money {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.money__earned {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.money__rest {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.money__rest--warn {
+    color: var(--warn);
+}
+
+.money__rest--good {
+    color: var(--good);
+}
+
+.pill.q {
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 20px;
+    white-space: nowrap;
+}
+
+.empty {
+    padding: 16px;
+    color: var(--muted);
+}

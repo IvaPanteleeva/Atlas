@@ -5,9 +5,10 @@ import { joinMeta, SiteListItem } from '../site.model';
 import { SiteStatusTagComponent } from '../site-status-tag/site-status-tag.component';
 
 /** What is shown under the earned amount: „остават X €“, „изплатено“ or „надплатено X €“. */
-type Rest = { kind: 'owed' | 'paid' | 'overpaid'; amount: number } | null;
+export type Rest = { kind: 'owed' | 'paid' | 'overpaid'; amount: number } | null;
 
-function restOf({ earned, remaining }: SiteSummaryRow): Rest {
+/** Also used by the portal list, so both lists read the server's numbers the same way. */
+export function restOf({ earned, remaining }: Pick<SiteSummaryRow, 'earned' | 'remaining'>): Rest {
     if (remaining > 0) {
         return { kind: 'owed', amount: remaining };
     }

@@ -1,0 +1,74 @@
+:host {
+    display: block;
+}
+
+.back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    margin: 0 0 8px -15px;
+    color: var(--muted);
+
+    &:hover {
+        color: var(--ink);
+    }
+}
+
+.ledger {
+    margin-top: 14px;
+}
+
+.open {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 0;
+}
+
+.pill.q {
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
+.note,
+.not-found p {
+    color: var(--muted);
+}
+
+.not-found a {
+    color: var(--ink);
+    text-decoration: underline;
+}
+
+.work-days,
+.payments {
+    margin-top: 28px;
+}
+
+.count {
+    margin-left: 4px;
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.sec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+
+    h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+}

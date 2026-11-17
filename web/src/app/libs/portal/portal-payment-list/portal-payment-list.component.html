@@ -1,0 +1,13 @@
+@if (rows().length) {
+    <ul class="payments">
+        @for (row of rows(); track $index) {
+            <li class="payment">
+                <span class="date num">{{ row.day }}</span>
+                <span class="label">Плащане</span>
+                <span class="amount num">{{ row.payment.amount | eur }}</span>
+            </li>
+        }
+    </ul>
+} @else {
+    <p class="empty">Няма плащания.</p>
+}

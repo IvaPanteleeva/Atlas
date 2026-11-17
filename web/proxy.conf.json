@@ -2,5 +2,9 @@
     "/api": {
         "target": "http://localhost:5002",
         "secure": false
+    },
+    "/portal/sites": {
+        "target": "http://localhost:5002",
+        "secure": false
     }
 }

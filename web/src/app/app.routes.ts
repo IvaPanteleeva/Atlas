@@ -1,9 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, clientGuard, guestGuard, staffGuard } from './libs/auth/auth.guards';
 
-const placeholderPage = () =>
-    import('./libs/shared/placeholder-page/placeholder-page.component').then((m) => m.PlaceholderPageComponent);
-
 export const routes: Routes = [
     {
         path: 'login',
@@ -70,10 +67,23 @@ export const routes: Routes = [
             },
             {
                 path: 'portal',
-                title: 'Портал · Атлас',
-                data: { title: 'Порталът идва скоро' },
+                title: 'Обекти · Атлас',
                 canActivate: [clientGuard],
-                loadComponent: placeholderPage,
+                loadComponent: () =>
+                    import('./libs/portal/portal-sites-page/portal-sites-page.component').then(
+                        (m) => m.PortalSitesPageComponent,
+                    ),
+            },
+            {
+                // Not /portal/sites/:id: that is the API path (GET /portal/sites/{id}), so a reload there would get
+                // JSON from the API instead of the app (production serves both from one origin).
+                path: 'portal/:id',
+                title: 'Обект · Атлас',
+                canActivate: [clientGuard],
+                loadComponent: () =>
+                    import('./libs/portal/portal-site-page/portal-site-page.component').then(
+                        (m) => m.PortalSitePageComponent,
+                    ),
             },
         ],
     },
