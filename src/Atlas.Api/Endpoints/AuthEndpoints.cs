@@ -4,6 +4,7 @@ using Atlas.Api.Common;
 using Atlas.Application.Auth;
 using Atlas.Application.Contracts;
 using Atlas.Infrastructure.Identity;
+using Atlas.Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 public static class AuthEndpoints
@@ -50,9 +51,18 @@ public static class AuthEndpoints
         return TypedResults.NoContent();
     }
 
-    // Only reached with a valid cookie (fallback policy), so the claims are there.
-    private static Results<Ok<MeResponse>, UnauthorizedHttpResult> GetMe(ICurrentUser currentUser)
+    // Only reached with a valid cookie (fallback policy), so the claims are there. The linked person comes from the
+    // database: the Owner may link or unlink it while the user is signed in.
+    private static async Task<Results<Ok<MeResponse>, UnauthorizedHttpResult>> GetMe(
+        ICurrentUser currentUser,
+        IUserRepository users,
+        CancellationToken cancellationToken)
         => currentUser is { UserId: { } id, UserName: { } userName, Role: { } role }
-            ? TypedResults.Ok(new MeResponse(id, userName, role, currentUser.CompanyId))
+            ? TypedResults.Ok(new MeResponse(
+                id,
+                userName,
+                role,
+                currentUser.CompanyId,
+                await users.GetPersonIdAsync(id, cancellationToken)))
             : TypedResults.Unauthorized();
 }

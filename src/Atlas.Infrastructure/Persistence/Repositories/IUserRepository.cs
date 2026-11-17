@@ -23,6 +23,10 @@ public interface IUserRepository : IRepository<AtlasUser>
     // already linked to another profile.
     Task<Result<UserResponse>> LinkPersonAsync(Guid id, LinkPersonRequest request, CancellationToken cancellationToken);
 
+    // The person linked to the profile, or null (also for an unknown user). Read from the database, not from the
+    // cookie: the link may change while the user is signed in.
+    Task<Guid?> GetPersonIdAsync(Guid id, CancellationToken cancellationToken);
+
     // NotFound; Conflict for the caller's own user or for the last Owner.
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken);
 }

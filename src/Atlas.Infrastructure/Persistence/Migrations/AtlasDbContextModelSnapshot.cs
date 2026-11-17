@@ -315,6 +315,41 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                     b.ToTable("SitePrices");
                 });
 
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.SiteTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssigneeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Done")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("DoneAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssigneeId");
+
+                    b.HasIndex("SiteId");
+
+                    b.ToTable("SiteTasks");
+                });
+
             modelBuilder.Entity("Atlas.Infrastructure.Entities.WorkDay", b =>
                 {
                     b.Property<Guid>("Id")
@@ -603,6 +638,23 @@ namespace Atlas.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Service");
+
+                    b.Navigation("Site");
+                });
+
+            modelBuilder.Entity("Atlas.Infrastructure.Entities.SiteTask", b =>
+                {
+                    b.HasOne("Atlas.Infrastructure.Entities.Person", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Atlas.Infrastructure.Entities.Site", "Site")
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Assignee");
 
                     b.Navigation("Site");
                 });

@@ -29,6 +29,8 @@ public sealed class AtlasDbContext(DbContextOptions<AtlasDbContext> options)
 
     public DbSet<SiteContact> SiteContacts => this.Set<SiteContact>();
 
+    public DbSet<SiteTask> SiteTasks => this.Set<SiteTask>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Identity's own model first, so our configurations can extend it.

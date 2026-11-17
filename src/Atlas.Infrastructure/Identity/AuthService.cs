@@ -42,7 +42,7 @@ public sealed class AuthService(
         var roles = await userManager.GetRolesAsync(user);
 
         // One role per user (decided in 2.2).
-        return new MeResponse(user.Id, user.UserName!, roles.Single(), user.CompanyId);
+        return new MeResponse(user.Id, user.UserName!, roles.Single(), user.CompanyId, user.PersonId);
     }
 
     public async Task LogoutAsync()

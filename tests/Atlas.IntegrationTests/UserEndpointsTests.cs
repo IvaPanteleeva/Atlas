@@ -57,7 +57,7 @@ public class UserEndpointsTests(AtlasApiFactory factory)
 
         var manager = await factory.CreateLoggedInClientAsync("ivan", Password);
         var me = await manager.GetFromJsonAsync<MeResponse>("/api/auth/me");
-        Assert.Equal(new MeResponse(user.Id, "ivan", Roles.Manager, null), me);
+        Assert.Equal(new MeResponse(user.Id, "ivan", Roles.Manager, null, null), me);
     }
 
     [Fact]

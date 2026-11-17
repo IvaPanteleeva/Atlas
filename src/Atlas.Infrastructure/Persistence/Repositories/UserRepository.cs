@@ -186,6 +186,12 @@ public sealed class UserRepository(AtlasDbContext data, UserManager<AtlasUser> u
         return Result.Success;
     }
 
+    public async Task<Guid?> GetPersonIdAsync(Guid id, CancellationToken cancellationToken)
+        => await this.Data.Users
+            .Where(u => u.Id == id)
+            .Select(u => u.PersonId)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var user = await userManager.FindByIdAsync(id.ToString());
