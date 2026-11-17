@@ -44,7 +44,7 @@ Frontend: структура като Gemsoft.
   docs/                     ai-log.md, screenshots/ (само локално)
 ```
 - Отделно git repo в тази папка, branch `main`. GitHub: https://github.com/IvaPanteleeva/Atlas — private до предаването на курсовата, после public (линкът е за курсовата).
-- Хостинг: Heroku. Деплоят се прави след функционалност 9; дотогава CI прави само build и тестове. За деплоя: Heroku Postgres дава `DATABASE_URL` (`postgres://...`), който трябва да се превърне в connection string за Npgsql; портът идва от `PORT`.
+- Хостинг: Heroku. Деплоят се прави след предаването на курсовата (рунд 34); дотогава CI прави само build и тестове. За деплоя: Heroku Postgres дава `DATABASE_URL` (`postgres://...`), който трябва да се превърне в connection string за Npgsql; портът идва от `PORT`.
 - Solution е `Atlas.slnx`. Тестовете са описани в „Архитектура“. CI (`.github/workflows/ci.yml`) пуска build и всички тестове при push/PR към `main`. Angular без SSR, със SCSS и routing.
 - EF миграциите се прилагат сами при старт само в Development.
 - Plan Mode преди подстъпки, които създават основа или модел на данните.
@@ -211,6 +211,14 @@ Frontend: структура като Gemsoft.
 Проектът е и курсова работа: документ (3–6 стр.), който описва системата по модули и как AI е помогнал за всеки.
 За всеки модул трябват: подход, стъпки (какво е поискано от AI и какво е променено), тестване, избор на AI инструмент и 2–3 ключови prompt-а.
 Модули: 1) Database layer, 2) API и бизнес логика, 3) Authentication и роли, 4) Портал за възложителя, 5) Angular UI, 6) Testing layer.
+- Документът (рунд 34):
+  - На английски, в първо лице от Ива. AI е писал кода, Ива е взимала решенията и е тествала; примерите показват къде е поправяла AI.
+  - Claude документ, после експорт в Google Docs.
+  - Заданието е в `Project-Assignment.docx` (локално, в `.gitignore`). Предава се линк към Google Doc („anyone with the link can view“), 3–6 стр.
+  - Структура: идея и изисквания (до 1 стр.); как работихме с AI (кратко); 6-те модула, всеки до половин страница (approach & reasoning, step-by-step workflow, testing strategy, AI tool choice и защо, 2–3 prompt-а дословно); Challenges & Tool Comparison (най-големите трудности, кой инструмент помогна най-много и защо, какво бих подобрила); Working System Evidence; линк към repo-то.
+  - Screenshot-и от `docs/screenshots/` (заданието иска поне 2), малки.
+  - Преди предаването: ревю с `@claude` в PR (модул 6); README; проверка на историята за тайни и repo-то става public (превключва го Ива).
+  - Без деплой преди предаването (Heroku е след него).
 - Курсовият обхват е функционалности 1–9. Модулите на курсовата се попълват от тях (напр. „Authentication и роли“ = функционалност 2; „Database layer“ = 1 + моделите във всяка следваща).
 
 ### Инструменти по модули
