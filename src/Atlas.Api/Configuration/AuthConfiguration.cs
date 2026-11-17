@@ -51,7 +51,10 @@ public static class AuthConfiguration
             .AddAuthorizationBuilder()
             .AddPolicy(Policies.Owner, policy => policy.RequireRole(Roles.Owner))
             .AddPolicy(Policies.Staff, policy => policy.RequireRole(Roles.Owner, Roles.Manager))
-            .AddPolicy(Policies.Client, policy => policy.RequireRole(Roles.ClientViewer))
+            // A ClientViewer without a company has nothing to see: the portal filters every query by this claim.
+            .AddPolicy(Policies.Client, policy => policy
+                .RequireRole(Roles.ClientViewer)
+                .RequireClaim(AtlasClaims.CompanyId))
             // Every endpoint needs a signed-in user unless it says AllowAnonymous (login, health, ...).
             .SetFallbackPolicy(new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()

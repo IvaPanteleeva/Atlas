@@ -26,22 +26,11 @@ public sealed class SiteRepository(AtlasDbContext data) : DataRepository<Site>(d
         s.MapUrl,
         s.Note);
 
-    // Ordering is done in SQL (CLAUDE.md "Плащания и суми"): current sites first, then leads, then finished.
-    // Current sites go by their latest work day, newest first; those without days come last (Postgres puts NULL
-    // first in a descending order, hence the explicit key). Leads and finished sites go by name. Id breaks ties.
+    // Ordering is done in SQL, the same as the client portal's list (SiteListQueries).
     public async Task<IReadOnlyList<SiteListResponse>> ListAsync(CancellationToken cancellationToken)
         => await this.Data.Sites
             .AsNoTracking()
-            .Select(s => new
-            {
-                Site = s,
-                LastWorkDate = this.Data.WorkDays.Where(d => d.SiteId == s.Id).Max(d => (DateOnly?)d.Date),
-            })
-            .OrderBy(x => x.Site.Status == SiteStatus.Active ? 0 : x.Site.Status == SiteStatus.Lead ? 1 : 2)
-            .ThenBy(x => x.Site.Status == SiteStatus.Active && x.LastWorkDate == null ? 1 : 0)
-            .ThenByDescending(x => x.Site.Status == SiteStatus.Active ? x.LastWorkDate : null)
-            .ThenBy(x => x.Site.Name)
-            .ThenBy(x => x.Site.Id)
+            .OrderedForList(this.Data)
             .Select(x => new SiteListResponse(
                 x.Site.Id,
                 x.Site.Name,
